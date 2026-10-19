@@ -535,6 +535,26 @@ $('#sessionForm').addEventListener('submit', e => {
   if (cardDialog.open) openClientCard(clientId);
 });
 
+/* ---------- часы ---------- */
+
+const clockEl = $('#clock');
+let clockDay = today();
+
+function tickClock() {
+  const now = new Date();
+  clockEl.textContent = [now.getHours(), now.getMinutes(), now.getSeconds()]
+    .map(n => String(n).padStart(2, '0')).join(':');
+
+  // если наступил новый день — обновляем дату, приветствие и списки
+  if (today() !== clockDay) {
+    clockDay = today();
+    render();
+  }
+}
+
+tickClock();
+setInterval(tickClock, 1000);
+
 /* ---------- старт ---------- */
 
 load();

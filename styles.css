@@ -141,6 +141,12 @@ svg { width: 18px; height: 18px; flex: none; }
 @keyframes fade { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: none; } }
 
 .view-head h1 { margin: 0; font-size: 28px; letter-spacing: -.025em; font-weight: 700; }
+.clock {
+  display: inline-block; margin-left: 9px; padding: 1px 9px 2px;
+  background: var(--accent-soft); color: var(--accent);
+  border-radius: 999px; font-size: 13px; font-weight: 600;
+  font-variant-numeric: tabular-nums; letter-spacing: .02em;
+}
 .view-sub { margin: 6px 0 0; font-size: 14px; color: var(--muted); }
 
 /* ---------- stats ---------- */
@@ -243,7 +249,10 @@ svg { width: 18px; height: 18px; flex: none; }
 }
 .client-body { display: flex; flex-direction: column; gap: 5px; min-width: 0; flex: 1; }
 .client-top { display: flex; align-items: center; gap: 8px; justify-content: space-between; }
-.client-top strong { font-size: 15px; letter-spacing: -.01em; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.client-top strong {
+  font-size: 15px; letter-spacing: -.01em; flex: 1; min-width: 0;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
 .client-meta { font-size: 13px; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
 .empty { padding: 34px 18px; text-align: center; color: var(--muted); font-size: 14px; }
@@ -345,12 +354,17 @@ svg { width: 18px; height: 18px; flex: none; }
   .panel-head { gap: 10px; margin-bottom: 12px; }
   .panel h2 { font-size: 16px; }
 
-  .chips { flex-wrap: nowrap; overflow-x: auto; gap: 6px; padding-bottom: 2px; margin-bottom: 14px; }
+  .chips { flex-wrap: wrap; overflow-x: visible; gap: 6px; margin-bottom: 14px; }
   .chip { height: 40px; flex: none; }
 
   .clients-grid { grid-template-columns: 1fr; gap: 10px; }
   .client-card { padding: 14px; }
   .avatar { width: 42px; height: 42px; font-size: 14px; }
+  /* на телефоне имя, контакты и статус переносятся, а не обрезаются краем */
+  .client-top { flex-wrap: wrap; gap: 6px; }
+  .client-top strong { flex: 1 1 100%; white-space: normal; overflow: visible; text-overflow: clip; }
+  .client-meta { white-space: normal; overflow: visible; text-overflow: clip; overflow-wrap: anywhere; }
+  .view-sub { overflow-wrap: anywhere; }
 
   /* ближайшие встречи: сверху дата и оплата, ниже имя и тема */
   .session-row {
