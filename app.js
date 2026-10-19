@@ -401,12 +401,12 @@ $('#search').addEventListener('input', e => {
   render();
 });
 
-$('#resetDemo').addEventListener('click', () => {
+$$('[data-reset-demo]').forEach(btn => btn.addEventListener('click', () => {
   if (!confirm('Вернуть демонстрационные данные? Всё, что ты добавила, будет удалено.')) return;
   seed();
   save();
   render();
-});
+}));
 
 document.addEventListener('click', e => {
   const target = e.target.closest('[data-status],[data-open-client],[data-open-session],[data-toggle-paid],[data-del-session],[data-action],[data-close],[data-close-card]');
