@@ -449,7 +449,11 @@ function renderWeek() {
 
   const total = state.sessions.filter(s => s.date >= days[0] && s.date <= end);
   const busy = total.length;
-  const free = state.clients.filter(c => c.status === 'active' || c.status === 'new').length;
+  const bookedDays = new Set(total.map(s => s.date)).size;
+  const unpaidWeek = total.filter(s => !s.paid).reduce((sum, s) => sum + (Number(s.amount) || 0), 0);
+  const busiest = days
+    .map(day => ({ day, count: total.filter(s => s.date === day).length }))
+    .sort((a, b) => b.count - a.count)[0];
 
   $('#weekList').innerHTML = days.map(day => {
     const list = state.sessions
@@ -481,10 +485,14 @@ function renderWeek() {
 
   const summary = $('#week');
   if (summary) {
+    const busiestHint = busiest && busiest.count
+      ? parseDate(busiest.day).toLocaleDateString('ru-RU', { weekday: 'short' }) + ', ' + parseDate(busiest.day).getDate()
+      : '—';
     summary.innerHTML = `
-      <div class="week-stat"><strong>${busy}</strong><span>${plural(busy, 'встреча', 'встречи', 'встреч')} на неделе</span></div>
-      <div class="week-stat"><strong>${free}</strong><span>клиентов в работе</span></div>
-      <div class="week-stat"><strong>${busy ? (busy / 5).toFixed(1) : '0'}</strong><span>встреч в день</span></div>
+      <div class="week-stat"><strong>${busy}</strong><span>${plural(busy, 'встреча', 'встречи', 'встреч')} за неделю</span></div>
+      <div class="week-stat"><strong>${bookedDays}<em>/7</em></strong><span>дней с встречами</span></div>
+      <div class="week-stat"><strong>${busiest && busiest.count ? busiestHint : '—'}</strong><span>самый занятый день</span></div>
+      <div class="week-stat"><strong>${money(unpaidWeek)}</strong><span>не оплачено за неделю</span></div>
     `;
   }
 }
@@ -642,48 +650,62 @@ function renderToday() {
   const t = today();
   const month = t.slice(0, 7);
   const todays = state.sessions.filter(s => s.date === t).sort((a, b) => (a.time || '').localeCompare(b.time || ''));
-  const inWork = state.clients.filter(c => c.status === 'active' || c.status === 'new');
+  const todaysLeft = todays.filter(s => sessionState(s) !== 'past');
+  const active = state.clients.filter(c => c.status === 'active');
+  const fresh = state.clients.filter(c => c.status === 'new');
   const paused = state.clients.filter(c => c.status === 'paused');
   const income = state.sessions.filter(s => s.paid && s.date.slice(0, 7) === month)
     .reduce((sum, s) => sum + (Number(s.amount) || 0), 0);
   const debt = state.sessions.filter(s => !s.paid && s.date <= t)
     .reduce((sum, s) => sum + (Number(s.amount) || 0), 0);
-  const next = [...state.sessions].filter(s => s.date >= t)
+
+  // ближайшая — только та, что ещё не закончилась
+  const next = [...state.sessions]
+    .filter(s => sessionState(s) !== 'past')
     .sort((a, b) => (a.date + (a.time || '')).localeCompare(b.date + (b.time || '')))[0];
 
-  const todayHint = todays.length
-    ? todays.map(s => `${s.time || ''} ${(clientById(s.clientId) || {}).name || ''}`.trim()).join(' · ')
-    : 'Свободный день';
+  const nextToday = todaysLeft[0];
+  const todayHint = !todays.length
+    ? 'Свободный день'
+    : nextToday
+      ? `дальше: ${nextToday.time || '—'} · ${(clientById(nextToday.clientId) || {}).name || ''}`.trim()
+      : 'все встречи прошли';
+
   const monthLabel = now.toLocaleDateString('ru-RU', { month: 'long' });
   const nextHint = next
     ? `${next.time || 'без времени'} · ${(clientById(next.clientId) || {}).name || 'клиент не найден'}`
     : 'Пока ничего не запланировано';
 
+  const clientHint = [
+    fresh.length ? `новых: ${fresh.length}` : '',
+    paused.length ? `на паузе: ${paused.length}` : '',
+  ].filter(Boolean).join(' · ') || `всего в базе: ${state.clients.length}`;
+
   $('#stats').innerHTML = `
-    <div class="stat">
+    <button class="stat" data-stat="today" type="button">
       <span class="stat-label">Сессий сегодня</span>
       <strong class="stat-value">${todays.length}</strong>
       <span class="stat-hint">${esc(todayHint)}</span>
-    </div>
-    <div class="stat">
+    </button>
+    <button class="stat" data-stat="clients" type="button">
       <span class="stat-label">Клиентов в работе</span>
-      <strong class="stat-value">${inWork.length}</strong>
-      <span class="stat-hint">всего в базе: ${state.clients.length}${paused.length ? `, на паузе: ${paused.length}` : ''}</span>
-    </div>
-    <div class="stat${debt ? ' is-warm' : ''}">
+      <strong class="stat-value">${active.length}</strong>
+      <span class="stat-hint">${esc(clientHint)}</span>
+    </button>
+    <button class="stat${debt ? ' is-warm' : ''}" data-stat="money" type="button">
       <span class="stat-label">Оплачено за ${monthLabel}</span>
       <strong class="stat-value">${money(income)}</strong>
       <span class="stat-hint">${debt ? `не оплачено: ${money(debt)}` : 'долгов нет'}</span>
-    </div>
-    <div class="stat">
+    </button>
+    <button class="stat" data-stat="next" type="button" ${next ? `data-session="${next.id}"` : 'disabled'}>
       <span class="stat-label">Ближайшая встреча</span>
       <strong class="stat-value">${next ? esc(relDay(next.date)) : '—'}</strong>
       <span class="stat-hint">${esc(nextHint)}</span>
-    </div>
+    </button>
   `;
 
   const upcoming = [...state.sessions]
-    .filter(s => s.date >= t)
+    .filter(s => sessionState(s) !== 'past')
     .sort((a, b) => (a.date + (a.time || '')).localeCompare(b.date + (b.time || '')))
     .slice(0, 6);
 
@@ -1096,6 +1118,10 @@ historyDialog.addEventListener('click', e => {
   if (e.target.closest('[data-close-history]')) historyDialog.close();
 });
 
+document.addEventListener('click', e => {
+  if (e.target.closest('[data-close-list]')) $('#listDialog').close();
+});
+
 /* закрыть меню по клику мимо */
 document.addEventListener('click', e => {
   const menu = $('#dataMenu');
@@ -1106,6 +1132,70 @@ document.addEventListener('click', e => {
 
 $('#weekPrev').addEventListener('click', () => { weekOffset -= 1; renderWeek(); });
 $('#weekNext').addEventListener('click', () => { weekOffset += 1; renderWeek(); });
+
+/* ---------- плитки статистики ---------- */
+
+$('#stats').addEventListener('click', e => {
+  const tile = e.target.closest('[data-stat]');
+  if (!tile) return;
+
+  if (tile.dataset.session) {
+    const session = state.sessions.find(s => s.id === tile.dataset.session);
+    if (session) openSessionForm(session);
+    return;
+  }
+
+  if (tile.dataset.stat === 'today') {
+    // показываем только сегодняшние встречи
+    const t = today();
+    const rows = state.sessions.filter(s => s.date === t)
+      .sort((a, b) => (a.time || '').localeCompare(b.time || ''));
+    showListDialog('Сегодня', rows);
+    return;
+  }
+
+  if (tile.dataset.stat === 'clients') {
+    state.statusFilter = 'active';
+    state.query = '';
+    $('#search').value = '';
+    setView('clients');
+    render();
+    return;
+  }
+
+  if (tile.dataset.stat === 'money') {
+    const month = today().slice(0, 7);
+    const rows = state.sessions.filter(s => s.date.slice(0, 7) === month)
+      .sort((a, b) => (b.date + (b.time || '')).localeCompare(a.date + (a.time || '')));
+    showListDialog('Оплаты за месяц', rows);
+    return;
+  }
+});
+
+/* ---------- список встреч в окне ---------- */
+
+function showListDialog(title, rows) {
+  const body = $('#listBody');
+  if (!body) return;
+
+  $('#listTitle').textContent = title;
+  body.innerHTML = rows.length
+    ? rows.map(s => {
+        const c = clientById(s.clientId) || {};
+        return `
+          <button class="session-line" data-open-session="${s.id}" type="button">
+            <span class="s-date"><strong>${humanDateShort(s.date)}</strong><span>${weekday(s.date)}${s.time ? ', ' + esc(s.time) : ''}</span></span>
+            <span class="s-client">${esc(c.name || 'клиент удалён')}</span>
+            <span class="s-topic">${esc(s.topic || '—')}</span>
+            <span class="s-amount">${s.amount ? money(s.amount) : '—'}</span>
+            <span class="pill ${s.paid ? 'pill-paid' : 'pill-unpaid'}">${s.paid ? 'оплачено' : 'долг'}</span>
+            <span></span>
+          </button>`;
+      }).join('')
+    : '<div class="empty">Здесь пока пусто</div>';
+
+  $('#listDialog').showModal();
+}
 
 /* ---------- таймер ---------- */
 
