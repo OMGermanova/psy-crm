@@ -382,11 +382,15 @@ svg { width: 18px; height: 18px; flex: none; }
 body.is-boss .client-top strong,
 body.is-boss .week-name,
 body.is-boss .session-main strong,
+body.is-boss .session-main span,
 body.is-boss .s-client,
+body.is-boss .s-topic,
 body.is-boss .card-head h2,
 body.is-boss .avatar,
 body.is-boss .bridge-text,
-body.is-boss .card-note {
+body.is-boss .card-note,
+body.is-boss .client-meta,
+body.is-boss .card-facts dd {
   filter: blur(6px);
 }
 body.is-boss .stat-value,
