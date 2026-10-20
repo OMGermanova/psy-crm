@@ -180,22 +180,50 @@ function seed() {
   // Контакты намеренно несуществующие: диапазон 000 в номерах и домен example.com
   // зарезервированы специально для примеров и не могут принадлежать реальному человеку.
   state.clients = [
-    { id: 'c1', name: 'Анна Петрова',   phone: '+7 000 000-00-01', email: 'anna.petrova@example.com', status: 'active', price: 4000, note: 'Тревожность, отношения с матерью. Раз в неделю, вторник вечером.', createdAt: day(-120) },
-    { id: 'c2', name: 'Дмитрий Соколов', phone: '+7 000 000-00-02', email: 'd.sokolov@example.com',    status: 'active', price: 4500, note: 'Выгорание на работе. Раз в неделю, пятница.', createdAt: day(-64) },
-    { id: 'c3', name: 'Марина Ильина',  phone: '+7 000 000-00-03', email: '',                         status: 'new',    price: 3500, note: 'Запрос про самооценку, первичная консультация.', createdAt: day(-6) },
-    { id: 'c4', name: 'Игорь Величко',  phone: '+7 000 000-00-04', email: 'i.velichko@example.com',   status: 'paused', price: 4000, note: 'Командировка до конца месяца, вернётся в работу.', createdAt: day(-200) },
-    { id: 'c5', name: 'Ольга Наумова',  phone: '+7 000 000-00-05', email: '',                         status: 'done',   price: 3800, note: 'Работа завершена после 14 сессий.', createdAt: day(-420) },
+    { id: 'c1',  name: 'Анна Петрова',      phone: '+7 000 000-00-01', email: 'anna.petrova@example.com',   status: 'active', price: 4000, note: 'Тревожность, отношения с матерью. Раз в неделю, вторник утром.', createdAt: day(-120) },
+    { id: 'c2',  name: 'Дмитрий Соколов',   phone: '+7 000 000-00-02', email: 'd.sokolov@example.com',      status: 'active', price: 4500, note: 'Выгорание на руководящей должности. Раз в неделю, вторник днём.', createdAt: day(-64) },
+    { id: 'c3',  name: 'Марина Ильина',     phone: '+7 000 000-00-03', email: '',                           status: 'new',    price: 3500, note: 'Запрос про самооценку, первичная консультация.', createdAt: day(-6) },
+    { id: 'c4',  name: 'Игорь Величко',     phone: '+7 000 000-00-04', email: 'i.velichko@example.com',     status: 'paused', price: 4000, note: 'Командировка до конца месяца, вернётся в работу.', createdAt: day(-200) },
+    { id: 'c5',  name: 'Ольга Наумова',     phone: '+7 000 000-00-05', email: '',                           status: 'done',   price: 3800, note: 'Работа завершена после 14 сессий. Запрос про отношения с деньгами.', createdAt: day(-420) },
+    { id: 'c6',  name: 'Тимур Асланов',     phone: '+7 000 000-00-06', email: 't.aslanov@example.com',      status: 'active', price: 4000, note: 'Подросток, 16 лет. Контакт — мать, Эльмира, +7 000 000-00-16. Запрос: отказ ходить в школу, конфликты дома.', createdAt: day(-45) },
+    { id: 'c7',  name: 'Вера Крылова',      phone: '+7 000 000-00-07', email: 'v.krylova@example.com',      status: 'active', price: 4200, note: 'Горе: потеря мужа полтора года назад. Пришла по своей инициативе, говорит «застряла».', createdAt: day(-88) },
+    { id: 'c8',  name: 'Павел Дёмин',       phone: '+7 000 000-00-08', email: 'p.demin@example.com',        status: 'active', price: 4500, note: 'Переезд в другой город два года назад. Запрос: «не понимаю, кто я здесь». Работал по специальности, сейчас нет.', createdAt: day(-30) },
+    { id: 'c9',  name: 'Наталья Гордеева',  phone: '+7 000 000-00-09', email: 'n.gordeeva@example.com',     status: 'active', price: 4000, note: 'Медсестра в отделении реанимации. Выгорание, срывы на близких. График сложный — встречи раз в две недели.', createdAt: day(-150) },
+    { id: 'c10', name: 'Ксения Литвинова',  phone: '+7 000 000-00-10', email: 'k.litvinova@example.com',    status: 'active', price: 4800, note: 'Пищевое поведение: эпизоды переедания на фоне стресса. Направлена гастроэнтерологом. Работаем с триггерами, не с весом.', createdAt: day(-70) },
+    { id: 'c11', name: 'Роман Ефимов',      phone: '+7 000 000-00-11', email: '',                           status: 'active', price: 4000, note: 'Вернулся после перерыва в 8 месяцев. Изначально — панические атаки, сейчас реже. Восстанавливаем регулярность.', createdAt: day(-300) },
+    { id: 'c12', name: 'Светлана Ковалёва', phone: '+7 000 000-00-12', email: 's.kovaleva@example.com',     status: 'active', price: 3800, note: 'Платит нерегулярно: «переведу после зарплаты», задерживает на 1–2 недели. Обсуждали, договорились на предоплату, пока не вышло.', createdAt: day(-95) },
+    { id: 'c13', name: 'Артём Гусев',       phone: '+7 000 000-00-13', email: 'a.gusev@example.com',        status: 'paused', price: 4000, note: 'Пауза по деньгам: потерял работу, попросил приостановить на два месяца. Договорились созвониться в ноябре.', createdAt: day(-110) },
+    { id: 'c14', name: 'Лидия Чернова',     phone: '+7 000 000-00-14', email: '',                           status: 'done',   price: 4000, note: 'Завершена успешно: 22 сессии за год. Запрос был про созависимость, вышла с ощущением «я справляюсь». Ушла с благодарностью.', createdAt: day(-500) },
+    { id: 'c15', name: 'Егор Малышев',      phone: '+7 000 000-00-15', email: 'e.malyshev@example.com',     status: 'new',    price: 4000, note: 'Написал в мессенджер, сомневается: «не уверен, что мне это нужно». Первая встреча назначена, но дважды переносил.', createdAt: day(-14) },
   ];
 
   state.sessions = [
-    { id: 's1', clientId: 'c1', date: day(0),   time: '10:00', topic: 'Границы с матерью',        note: '',                                    amount: 4000, paid: false },
-    { id: 's2', clientId: 'c2', date: day(0),   time: '15:30', topic: 'Восстановление ресурса',   note: '',                                    amount: 4500, paid: false },
-    { id: 's3', clientId: 'c3', date: day(1),   time: '12:00', topic: 'Знакомство, сбор анамнеза', note: '',                                   amount: 3500, paid: false },
-    { id: 's4', clientId: 'c1', date: day(7),   time: '10:00', topic: 'Продолжение работы',       note: '',                                    amount: 4000, paid: false },
-    { id: 's5', clientId: 'c1', date: day(-7),  time: '10:00', topic: 'Телесные реакции на стресс', note: 'Договорились вести дневник состояния.', amount: 4000, paid: true },
-    { id: 's6', clientId: 'c2', date: day(-5),  time: '15:30', topic: 'Границы в коллективе',     note: '',                                    amount: 4500, paid: true },
-    { id: 's7', clientId: 'c4', date: day(-12), time: '19:00', topic: 'Пауза в работе',           note: 'Возвращение через месяц.',            amount: 4000, paid: false },
-    { id: 's8', clientId: 'c3', date: day(-6),  time: '12:30', topic: 'Первичная встреча',        note: 'Запрос: «не могу себя хвалить».',     amount: 3500, paid: true },
+    // сегодня
+    { id: 's1',  clientId: 'c1',  date: day(0),   time: '10:00', topic: 'Границы с матерью', note: 'Разбирали эпизод на выходных: мать без предупреждения приехала. Анна промолчала, потом весь вечер злилась на себя. Вышли на формулировку «мне нужно знать заранее».', plan: 'Проверить, сказала ли она матери про предупреждение. Если нет — разобрать, что остановило.', amount: 4000, paid: false },
+    { id: 's2',  clientId: 'c2',  date: day(0),   time: '15:30', topic: 'Восстановление ресурса', note: 'Первая неделя после отпуска. Говорит, что отдохнул, но к среде вернулось то же ощущение. Обсудили разницу между «отдохнуть» и «разгрузиться».', plan: 'Посмотреть, какие задачи он берёт на себя добровольно, хотя мог бы не брать.', amount: 4500, paid: false },
+
+    // ближайшие
+    { id: 's3',  clientId: 'c7',  date: day(1),   time: '11:00', topic: 'Годовщина', note: '', plan: '', amount: 4200, paid: false },
+    { id: 's4',  clientId: 'c3',  date: day(2),   time: '12:00', topic: 'Знакомство, сбор анамнеза', note: '', plan: '', amount: 3500, paid: false },
+    { id: 's5',  clientId: 'c6',  date: day(2),   time: '17:00', topic: 'Школа: что происходит на самом деле', note: '', plan: '', amount: 4000, paid: false },
+    { id: 's6',  clientId: 'c10', date: day(3),   time: '18:30', topic: 'Триггеры переедания', note: '', plan: '', amount: 4800, paid: false },
+    { id: 's7',  clientId: 'c1',  date: day(7),   time: '10:00', topic: 'Продолжение работы', note: '', plan: '', amount: 4000, paid: false },
+    { id: 's8',  clientId: 'c9',  date: day(8),   time: '19:00', topic: 'Смены и восстановление', note: '', plan: '', amount: 4000, paid: false },
+
+    // прошедшие
+    { id: 's9',  clientId: 'c1',  date: day(-7),  time: '10:00', topic: 'Телесные реакции на стресс', note: 'Замечает сжатие в плечах перед звонком матери. Работали с дыханием, но говорит «не помогает, потому что злюсь».', plan: 'Вернуться к злости: что она хочет сделать.', amount: 4000, paid: true },
+    { id: 's10', clientId: 'c2',  date: day(-7),  time: '15:30', topic: 'Границы в коллективе', note: 'Согласился вести ещё один проект, хотя не хотел. Разбирали, что было страшно отказать. Сформулировал: «боюсь, что сочтут нелояльным».', plan: 'Спросить, пробовал ли отказать хоть раз за неделю.', amount: 4500, paid: true },
+    { id: 's11', clientId: 'c7',  date: day(-9),  time: '11:00', topic: 'Как говорить о нём в настоящем времени', note: 'Впервые заговорила о муже без слёз, но потом извинялась за это. Отметили: «мне стыдно, что я живу дальше».', plan: 'Не торопить. Спросить, что значит «жить дальше» для неё самой.', amount: 4200, paid: true },
+    { id: 's12', clientId: 'c8',  date: day(-6),  time: '14:00', topic: 'Работа как потерянная опора', note: 'Впервые назвал вслух: «я никто без должности». Много про отца, который спрашивает только про работу.', plan: 'Развести «я» и «моя профессия». Начать с того, что он делал хорошо до переезда.', amount: 4500, paid: false },
+    { id: 's13', clientId: 'c10', date: day(-5),  time: '18:30', topic: 'Что происходит перед эпизодом', note: 'Проследили цепочку: вечер, пустая квартира, телефон, ощущение «день прошёл зря». Согласилась, что дело не в еде, а в этом ощущении.', plan: 'Попробовать замечать момент «день прошёл зря» и записывать, что было до него.', amount: 4800, paid: true },
+    { id: 's14', clientId: 'c9',  date: day(-8),  time: '19:00', topic: 'После смены с потерей', note: 'Рассказала про пациента, которого не смогли спасти. Дома накричала на сына из-за мелочи, потом плакала. Сказала: «я так больше не могу, но уйти некуда».', plan: 'Обсудить, есть ли в отделении хоть кто-то, с кем можно говорить о таких случаях.', amount: 4000, paid: true },
+    { id: 's15', clientId: 'c6',  date: day(-5),  time: '17:00', topic: 'Разговор с матерью', note: 'Пришёл мрачный, говорил мало. На прямой вопрос ответил: «дома опять про оценки». Сам предложил: «может, поговорите с ней?»', plan: 'Отдельная встреча с матерью — обсудить, что происходит с требованиями. Тимуру сказать, что разговор будет.', amount: 4000, paid: true },
+    { id: 's16', clientId: 'c11', date: day(-11), time: '16:00', topic: 'Возвращение после перерыва', note: 'Паники стали реже, но появился страх, что «вернётся». Проверяли, что изменилось за 8 месяцев: научился замечать начало и выходить из ситуации.', plan: 'Сместить фокус с «как не допустить» на «что я делаю, когда начинается».', amount: 4000, paid: true },
+    { id: 's17', clientId: 'c12', date: day(-13), time: '12:00', topic: 'Деньги и стыд', note: 'Опять пришла без оплаты за прошлый раз. Сама заговорила первой: «мне очень неудобно». Разбирали, что мешает сказать прямо, что сейчас трудно.', plan: 'Предложить конкретный вариант: оплата в день встречи или пауза до стабилизации. Без осуждения.', amount: 3800, paid: false },
+    { id: 's18', clientId: 'c14', date: day(-40), time: '10:00', topic: 'Последняя встреча', note: 'Подводили итоги за год. Сказала, что впервые не боится остаться одна. Договорились, что может вернуться, если понадобится, — без объяснений и обязательств.', plan: '', amount: 4000, paid: true },
+    { id: 's19', clientId: 'c15', date: day(-12), time: '13:00', topic: 'Первая встреча не состоялась', note: 'Не пришёл, написал через два часа: «простите, не смог». Не переносили — предложил сам «может, позже».', plan: 'Написать один раз, коротко, без давления. Если не ответит — оставить.', amount: 0, paid: false },
+    { id: 's20', clientId: 'c13', date: day(-60), time: '18:00', topic: 'Пауза в работе', note: 'Сообщил о потере работы. Предложил паузу сам, я согласилась. Договорились, что напишет, когда сможет вернуться.', plan: '', amount: 4000, paid: false },
+    { id: 's21', clientId: 'c4',  date: day(-25), time: '19:00', topic: 'Командировка', note: 'Уезжает на месяц, встречи возобновим по возвращении. Состояние стабильное, запрос был про тревогу перед поездками — с этим поработали.', plan: '', amount: 4000, paid: true },
   ];
 }
 
@@ -502,18 +530,22 @@ function renderWeek() {
 function bridgeFor(clientId) {
   const t = today();
   const all = state.sessions
-    .filter(s => s.clientId === clientId && (s.note || s.topic))
+    .filter(s => s.clientId === clientId && (s.note || s.topic || s.plan))
     .sort((a, b) => (b.date + (b.time || '')).localeCompare(a.date + (a.time || '')));
 
   // сначала ищем именно прошедшие встречи, и только потом сегодняшние
   const last = all.find(s => s.date < t) || all.find(s => s.date === t);
   if (!last) return '';
+
   const text = (last.note || last.topic || '').trim();
-  if (!text) return '';
+  const plan = (last.plan || '').trim();
+  if (!text && !plan) return '';
+
   const when = last.date === t ? 'сегодня' : humanDateShort(last.date);
   return `<div class="bridge">
     <span class="bridge-label">Прошлый раз · ${esc(when)}</span>
-    <span class="bridge-text">${esc(text)}</span>
+    ${text ? `<span class="bridge-text">${esc(text)}</span>` : ''}
+    ${plan ? `<span class="bridge-plan"><b>План:</b> ${esc(plan)}</span>` : ''}
   </div>`;
 }
 
@@ -536,6 +568,8 @@ function timerPaint() {
   const face = $('#timerFace');
   face.classList.toggle('is-warning', timerLeft <= 600 && timerLeft > 0);
   face.classList.toggle('is-over', timerLeft <= 0);
+
+  if (typeof livePaint === 'function') livePaint();
 }
 
 function timerTick() {
@@ -577,6 +611,230 @@ function timerReset(minutes = TIMER_MINUTES) {
   $('#timerToggle').textContent = 'Старт';
   $('#timerHint').textContent = 'Готов, когда будешь готова.';
   timerPaint();
+}
+
+/* ---------- колода: вопросы для психолога ---------- */
+
+const DECK_KEY = 'psy-crm-deck';
+const DECK_CATS = [
+  ['anxiety', 'Тревога'],
+  ['relations', 'Отношения'],
+  ['borders', 'Границы'],
+  ['critic', 'Внутренний критик'],
+  ['work', 'Работа и выгорание'],
+  ['stuck', 'Застряла'],
+];
+
+const DECK_BASE = {
+  anxiety: [
+    'Что случится, если худшее произойдёт? А что тогда?',
+    'Где в теле это живёт прямо сейчас?',
+    'О чём тревога пытается тебя предупредить?',
+    'Что уже помогало — и что общего у этих случаев?',
+  ],
+  relations: [
+    'Что ты не говоришь, но хотела бы сказать?',
+    'Кем ты становишься рядом с этим человеком?',
+    'Что ты прощаешь, а что уже нет?',
+    'Если бы он изменился завтра — что бы ты почувствовала?',
+  ],
+  borders: [
+    'Что происходит с тобой в момент, когда ты соглашаешься?',
+    'Чей голос звучит, когда ты говоришь «надо»?',
+    'Что страшнее: отказать сейчас или злиться потом?',
+  ],
+  critic: [
+    'Чьим голосом это сказано?',
+    'Что бы ты сказала подруге в этой же ситуации?',
+    'За что ты себя не хвалишь — и почему это «не считается»?',
+  ],
+  work: [
+    'Когда ты последний раз чувствовала, что сделала достаточно?',
+    'Что ты делаешь, потому что надо, а не потому что хочешь?',
+    'Что случится, если ты остановишься на неделю?',
+  ],
+  stuck: [
+    'О чём я сейчас не спрашиваю?',
+    'Что мы обходим?',
+    'Что изменилось за эту встречу?',
+    'Если бы это была последняя встреча — что бы ты сказала?',
+  ],
+};
+
+function deckLoad() {
+  try {
+    const raw = localStorage.getItem(DECK_KEY);
+    if (raw) return JSON.parse(raw);
+  } catch (e) { /* нет хранилища */ }
+  return null;
+}
+
+function deckSave(data) {
+  try { localStorage.setItem(DECK_KEY, JSON.stringify(data)); } catch (e) { /* нет хранилища */ }
+}
+
+let deckData = deckLoad() || JSON.parse(JSON.stringify(DECK_BASE));
+let deckCat = 'any';
+let deckLast = '';
+
+function deckPool() {
+  if (deckCat === 'any') return Object.values(deckData).flat();
+  return deckData[deckCat] || [];
+}
+
+function deckDrawOne() {
+  const pool = deckPool().filter(q => q !== deckLast);
+  if (!pool.length) {
+    const all = deckPool();
+    return all.length ? all[0] : 'Вопросов пока нет. Добавьте свои.';
+  }
+  const pick = pool[Math.floor(Math.random() * pool.length)];
+  deckLast = pick;
+  return pick;
+}
+
+function deckRenderCats() {
+  const box = $('#deckCats');
+  if (!box) return;
+  box.innerHTML = [['any', 'Любая']].concat(DECK_CATS)
+    .map(([key, label]) => `<button class="chip${deckCat === key ? ' is-active' : ''}" data-deck-cat="${key}" type="button">${label}</button>`)
+    .join('');
+}
+
+/* ---------- подсказки из данных ---------- */
+
+function hintsFor(clientId) {
+  const out = [];
+  const c = clientById(clientId);
+  if (!c) return out;
+
+  const t = today();
+  const sessions = sessionsOf(clientId).filter(s => s.date <= t);
+  const last = sessions[sessions.length - 1];
+  const next = sessionsOf(clientId).find(s => s.date > t);
+  const debt = state.sessions.filter(s => s.clientId === clientId && !s.paid && s.date <= t);
+
+  if (last) {
+    const gap = Math.round((parseDate(t) - parseDate(last.date)) / 86400000);
+    // «пора написать» — только для тех, кто в работе; в паузе причина обычно известна
+    if (gap >= 21 && !next && c.status === 'active') {
+      out.push({ tone: 'warm', text: `Не было ${gap} ${plural(gap, 'день', 'дня', 'дней')}, следующей записи нет — возможно, пора написать.` });
+    }
+    if ((last.plan || '').trim() && last.date < t) {
+      out.push({ tone: 'calm', text: 'С прошлой встречи остался план — проверьте, закрыт ли он.' });
+    }
+  }
+
+  if (debt.length >= 2) {
+    const sum = debt.reduce((acc, s) => acc + (Number(s.amount) || 0), 0);
+    out.push({ tone: 'warm', text: `Не оплачено ${debt.length} ${plural(debt.length, 'сессия', 'сессии', 'сессий')} на ${money(sum)}.` });
+  } else if (debt.length === 1 && debt[0].date < t) {
+    out.push({ tone: 'calm', text: `Не оплачена встреча от ${humanDateShort(debt[0].date)}.` });
+  }
+
+  // подсказки про этап — только для тех, кто ещё в работе
+  if (c.status === 'new' || (c.status === 'active' && sessions.length === 0)) {
+    out.push({ tone: 'calm', text: 'Первая встреча: рамки, контракт, чего человек ждёт.' });
+  } else if (c.status === 'active' && sessions.length === 3) {
+    out.push({ tone: 'calm', text: 'Идёт четвёртая встреча — обычно здесь решается, продолжит ли человек.' });
+  }
+
+  if (c.status === 'paused' && last) {
+    const gap = Math.round((parseDate(t) - parseDate(last.date)) / 86400000);
+    if (gap >= 30) out.push({ tone: 'calm', text: `В паузе ${gap} ${plural(gap, 'день', 'дня', 'дней')} — можно деликатно напомнить о себе.` });
+  }
+
+  return out;
+}
+
+/* ---------- режим сессии ---------- */
+
+let liveSessionId = null;
+let liveDirty = false;
+let liveSaveTimer = null;
+
+function liveEl() { return $('#live'); }
+
+function liveOpen(sessionId) {
+  const s = state.sessions.find(x => x.id === sessionId);
+  if (!s) return;
+  const c = clientById(s.clientId);
+
+  liveSessionId = sessionId;
+  liveDirty = false;
+
+  $('#liveName').textContent = (c && c.name) || 'Клиент удалён';
+  $('#liveNote').value = s.note || '';
+  $('#livePlan').value = s.plan || '';
+  $('#liveSaved').textContent = 'Сохранено';
+
+  const bridge = bridgeFor(s.clientId);
+  $('#liveBridge').innerHTML = bridge || '<span class="live-empty">Прошлых записей нет — это начало.</span>';
+
+  const hints = hintsFor(s.clientId);
+  const hintBox = $('#liveHints');
+  if (hintBox) {
+    hintBox.innerHTML = hints.length
+      ? hints.map(h => `<div class="hint hint-${h.tone}">${esc(h.text)}</div>`).join('')
+      : '';
+    hintBox.hidden = !hints.length;
+  }
+
+  deckCat = 'any';
+  deckLast = '';
+  deckRenderCats();
+  $('#deckQ').textContent = 'Нажмите «Вытянуть»';
+  $('#liveDeckBox').hidden = true;
+
+  liveEl().hidden = false;
+  document.body.classList.add('is-live');
+
+  timerReset(TIMER_MINUTES);
+  timerStart();
+  livePaint();
+
+  setTimeout(() => $('#liveNote').focus(), 60);
+}
+
+function liveSave() {
+  if (!liveSessionId) return;
+  const s = state.sessions.find(x => x.id === liveSessionId);
+  if (!s) return;
+
+  s.note = $('#liveNote').value;
+  s.plan = $('#livePlan').value;
+
+  save();
+  liveDirty = false;
+  $('#liveSaved').textContent = 'Сохранено';
+}
+
+function liveQueueSave() {
+  liveDirty = true;
+  $('#liveSaved').textContent = 'Сохраняю…';
+  clearTimeout(liveSaveTimer);
+  liveSaveTimer = setTimeout(liveSave, 700);
+}
+
+function liveClose(silent) {
+  if (liveSessionId && liveDirty) liveSave();
+  timerStop();
+
+  liveEl().hidden = true;
+  document.body.classList.remove('is-live');
+  liveSessionId = null;
+
+  if (!silent) render();
+}
+
+function livePaint() {
+  const m = Math.floor(timerLeft / 60);
+  const s = timerLeft % 60;
+  const clock = $('#liveClock');
+  if (!clock) return;
+  clock.textContent = `${pad(m)}:${pad(s)}`;
+  clock.classList.toggle('is-warning', timerLeft <= 600 && timerLeft > 0);
+  clock.classList.toggle('is-over', timerLeft <= 0);
 }
 
 /* ---------- режим «босс»: скрыть имена и суммы ---------- */
@@ -836,6 +1094,7 @@ function openSessionForm(session, presetClientId) {
   $('#sessionTime').value = session ? session.time || '' : '';
   $('#sessionTopic').value = session ? session.topic || '' : '';
   $('#sessionNote').value = session ? session.note || '' : '';
+  $('#sessionPlan').value = session ? session.plan || '' : '';
   $('#sessionAmount').value = session ? (session.amount ?? '') : ((clientById(selected) || {}).price || '');
   $('#sessionPaid').checked = session ? !!session.paid : false;
 
@@ -850,11 +1109,14 @@ function openClientCard(id) {
   const past = sessions.filter(s => s.date <= today());
   const paidSum = sessions.filter(s => s.paid).reduce((sum, s) => sum + (Number(s.amount) || 0), 0);
   const debt = sessions.filter(s => !s.paid && s.date <= today()).reduce((sum, s) => sum + (Number(s.amount) || 0), 0);
-  const next = sessions.find(s => s.date >= today());
+  const next = sessions.find(s => sessionState(s) !== 'past');
   const st = STATUS[c.status] || { label: '—', className: 'st-done' };
+  const hints = hintsFor(c.id);
+  const todaySession = sessions.find(s => s.date === today());
 
   $('#cardBody').innerHTML = `
     ${bridgeFor(c.id)}
+    ${hints.length ? `<div class="hints">${hints.map(h => `<div class="hint hint-${h.tone}">${esc(h.text)}</div>`).join('')}</div>` : ''}
     <div class="card-head">
       <span class="avatar">${esc(initials(c.name))}</span>
       <div>
@@ -890,7 +1152,10 @@ function openClientCard(id) {
     </div>
 
     <div class="card-actions">
-      <button class="btn btn-primary" data-action="add-session" data-client-id="${c.id}" type="button">+ Сессия</button>
+      ${todaySession
+        ? `<button class="btn btn-primary" data-action="start-live" data-session-id="${todaySession.id}" type="button">Начать сессию</button>`
+        : ''}
+      <button class="btn ${todaySession ? 'btn-soft' : 'btn-primary'}" data-action="add-session" data-client-id="${c.id}" type="button">+ Сессия</button>
       <button class="btn btn-soft" data-action="edit-client" data-client-id="${c.id}" type="button">Редактировать</button>
       <button class="btn btn-danger" data-action="delete-client" data-client-id="${c.id}" type="button">Удалить</button>
       <button class="btn btn-ghost" data-close-card type="button" style="margin-left:auto">Закрыть</button>
@@ -955,6 +1220,12 @@ document.addEventListener('click', e => {
   }
 
   if (target.dataset.action === 'new-client') { openClientForm(null); return; }
+
+  if (target.dataset.action === 'start-live') {
+    cardDialog.close();
+    liveOpen(target.dataset.sessionId);
+    return;
+  }
 
   if (target.dataset.action === 'add-session') {
     const clientId = target.dataset.clientId;
@@ -1029,6 +1300,7 @@ $('#sessionForm').addEventListener('submit', e => {
     time: $('#sessionTime').value,
     topic: $('#sessionTopic').value.trim(),
     note: $('#sessionNote').value.trim(),
+    plan: $('#sessionPlan').value.trim(),
     amount: Number($('#sessionAmount').value) || (client ? Number(client.price) || 0 : 0),
     paid: $('#sessionPaid').checked,
   };
@@ -1219,6 +1491,60 @@ $$('[data-timer]').forEach(btn => btn.addEventListener('click', () => {
   timerReset(minutes);
   timerStart(minutes);
 }));
+
+/* ---------- режим сессии: события ---------- */
+
+$('#liveNote').addEventListener('input', liveQueueSave);
+$('#livePlan').addEventListener('input', liveQueueSave);
+
+$('#liveExit').addEventListener('click', () => {
+  liveSave();
+  liveClose();
+  toast('Заметка сохранена');
+});
+
+$('#liveDone').addEventListener('click', () => {
+  liveSave();
+  const s = state.sessions.find(x => x.id === liveSessionId);
+  if (s && !s.topic) { s.topic = 'Сессия'; }
+  if (s) save();
+  liveClose();
+  toast('Сессия завершена');
+});
+
+$('#liveMissed').addEventListener('click', () => {
+  if (!confirm('Отметить, что встреча не состоялась? Время останется в расписании, оплата не начислится.')) return;
+  const s = state.sessions.find(x => x.id === liveSessionId);
+  if (s) {
+    s.note = $('#liveNote').value || 'Встреча не состоялась.';
+    s.plan = $('#livePlan').value;
+    s.amount = 0;
+    s.paid = false;
+    s.missed = true;
+    save();
+  }
+  liveClose();
+  toast('Отмечено: не состоялась');
+});
+
+$('#liveDeck').addEventListener('click', () => {
+  const box = $('#liveDeckBox');
+  box.hidden = !box.hidden;
+  if (!box.hidden) { deckRenderCats(); $('#deckQ').textContent = 'Нажмите «Вытянуть»'; }
+});
+
+$('#deckClose').addEventListener('click', () => { $('#liveDeckBox').hidden = true; });
+
+$('#deckDraw').addEventListener('click', () => { $('#deckQ').textContent = deckDrawOne(); });
+
+document.addEventListener('click', e => {
+  const cat = e.target.closest('[data-deck-cat]');
+  if (!cat) return;
+  deckCat = cat.dataset.deckCat;
+  deckLast = '';
+  deckRenderCats();
+  $('#deckQ').textContent = 'Нажмите «Вытянуть»';
+});
 
 /* ---------- режим «босс» ---------- */
 

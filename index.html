@@ -261,6 +261,11 @@
         <textarea id="sessionNote" rows="3" placeholder="Что обсуждали, что важно на следующий раз"></textarea>
       </label>
 
+      <label class="field field-plan">
+        <span>План на следующую встречу</span>
+        <textarea id="sessionPlan" rows="2" placeholder="С чего начну, что хочу проверить"></textarea>
+      </label>
+
       <label class="check">
         <input type="checkbox" id="sessionPaid" />
         <span>Оплачено</span>
@@ -320,6 +325,56 @@
       </div>
     </div>
   </dialog>
+
+  <!-- Режим сессии: полноэкранный, всё лишнее убрано -->
+  <div class="live" id="live" hidden>
+    <div class="live-top">
+      <div class="live-who">
+        <span class="live-label">Сессия</span>
+        <strong id="liveName">—</strong>
+      </div>
+      <div class="live-clock" id="liveClock">50:00</div>
+      <div class="live-actions">
+        <button class="live-btn" type="button" id="liveDeck" title="Колода">Колода</button>
+        <button class="live-btn live-btn-exit" type="button" id="liveExit">Выйти</button>
+      </div>
+    </div>
+
+    <div class="live-body">
+      <section class="live-hints" id="liveHints" hidden></section>
+
+      <section class="live-bridge" id="liveBridge"></section>
+
+      <section class="live-deck" id="liveDeckBox" hidden>
+        <div class="deck-cats" id="deckCats"></div>
+        <div class="deck-card" id="deckCard">
+          <p class="deck-q" id="deckQ">Нажмите «Вытянуть»</p>
+          <div class="deck-tools">
+            <button class="btn btn-primary" type="button" id="deckDraw">Вытянуть</button>
+            <button class="btn btn-ghost" type="button" id="deckClose">Свернуть</button>
+          </div>
+        </div>
+      </section>
+
+      <label class="live-field">
+        <span>Заметка</span>
+        <textarea id="liveNote" rows="8" placeholder="Что происходит, что важно…"></textarea>
+      </label>
+
+      <label class="live-field">
+        <span>План на следующую встречу</span>
+        <textarea id="livePlan" rows="3" placeholder="С чего начну в следующий раз"></textarea>
+      </label>
+    </div>
+
+    <div class="live-foot">
+      <span class="live-saved" id="liveSaved">Сохранено</span>
+      <div class="live-foot-actions">
+        <button class="btn btn-ghost" type="button" id="liveMissed">Не состоялась</button>
+        <button class="btn btn-primary" type="button" id="liveDone">Завершить сессию</button>
+      </div>
+    </div>
+  </div>
 
   <input type="file" id="importFile" accept="application/json,.json" hidden />
   <script src="app.js"></script>
