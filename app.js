@@ -419,12 +419,174 @@ function toast(text) {
   toastTimer = setTimeout(() => el.classList.remove('is-visible'), 2600);
 }
 
+/* ---------- расписание недели ---------- */
+
+let weekOffset = 0;
+
+function weekStart(offset) {
+  const d = new Date();
+  const dow = (d.getDay() + 6) % 7; // понедельник = 0
+  d.setDate(d.getDate() - dow + offset * 7);
+  d.setHours(0, 0, 0, 0);
+  return d;
+}
+
+function renderWeek() {
+  const start = weekStart(weekOffset);
+  const days = Array.from({ length: 7 }, (_, i) => {
+    const d = new Date(start);
+    d.setDate(start.getDate() + i);
+    return iso(d);
+  });
+  const t = today();
+
+  const end = days[6];
+  const label = start.toLocaleDateString('ru-RU', { day: 'numeric', month: 'long' })
+    + ' — ' + parseDate(end).toLocaleDateString('ru-RU', { day: 'numeric', month: 'long' });
+  $('#weekTitle').textContent = weekOffset === 0 ? 'Расписание недели' : 'Неделя ' + label;
+
+  const total = state.sessions.filter(s => s.date >= days[0] && s.date <= end);
+  const busy = total.length;
+  const free = state.clients.filter(c => c.status === 'active' || c.status === 'new').length;
+
+  $('#weekList').innerHTML = days.map(day => {
+    const list = state.sessions
+      .filter(s => s.date === day)
+      .sort((a, b) => (a.time || '').localeCompare(b.time || ''));
+    const isToday = day === t;
+    const isPast = day < t;
+
+    return `
+      <div class="week-day${isToday ? ' is-today' : ''}${isPast ? ' is-past' : ''}">
+        <div class="week-day-head">
+          <span class="week-dow">${parseDate(day).toLocaleDateString('ru-RU', { weekday: 'short' })}</span>
+          <span class="week-num">${parseDate(day).getDate()}</span>
+        </div>
+        <div class="week-slots">
+          ${list.length
+            ? list.map(s => {
+                const c = clientById(s.clientId) || {};
+                return `
+                  <button class="week-slot" data-open-session="${s.id}" type="button">
+                    <span class="week-time">${esc(s.time || '—')}</span>
+                    <span class="week-name">${esc(c.name || 'Клиент удалён')}</span>
+                  </button>`;
+              }).join('')
+            : '<span class="week-free">свободно</span>'}
+        </div>
+      </div>`;
+  }).join('');
+
+  const summary = $('#week');
+  if (summary) {
+    summary.innerHTML = `
+      <div class="week-stat"><strong>${busy}</strong><span>${plural(busy, 'встреча', 'встречи', 'встреч')} на неделе</span></div>
+      <div class="week-stat"><strong>${free}</strong><span>клиентов в работе</span></div>
+      <div class="week-stat"><strong>${busy ? (busy / 5).toFixed(1) : '0'}</strong><span>встреч в день</span></div>
+    `;
+  }
+}
+
+/* ---------- «мостик»: о чём договорились в прошлый раз ---------- */
+
+function bridgeFor(clientId) {
+  const t = today();
+  const all = state.sessions
+    .filter(s => s.clientId === clientId && (s.note || s.topic))
+    .sort((a, b) => (b.date + (b.time || '')).localeCompare(a.date + (a.time || '')));
+
+  // сначала ищем именно прошедшие встречи, и только потом сегодняшние
+  const last = all.find(s => s.date < t) || all.find(s => s.date === t);
+  if (!last) return '';
+  const text = (last.note || last.topic || '').trim();
+  if (!text) return '';
+  const when = last.date === t ? 'сегодня' : humanDateShort(last.date);
+  return `<div class="bridge">
+    <span class="bridge-label">Прошлый раз · ${esc(when)}</span>
+    <span class="bridge-text">${esc(text)}</span>
+  </div>`;
+}
+
+/* ---------- таймер сессии ---------- */
+
+const TIMER_MINUTES = 50;
+let timerLeft = TIMER_MINUTES * 60;
+let timerRunning = false;
+let timerId = null;
+
+function timerPaint() {
+  const m = Math.floor(timerLeft / 60);
+  const s = timerLeft % 60;
+  $('#timerFace').textContent = `${pad(m)}:${pad(s)}`;
+
+  const total = TIMER_MINUTES * 60;
+  const done = Math.max(0, Math.min(100, ((total - timerLeft) / total) * 100));
+  $('#timerBar').style.width = done + '%';
+
+  const face = $('#timerFace');
+  face.classList.toggle('is-warning', timerLeft <= 600 && timerLeft > 0);
+  face.classList.toggle('is-over', timerLeft <= 0);
+}
+
+function timerTick() {
+  if (!timerRunning) return;
+  timerLeft -= 1;
+  if (timerLeft === 600) toast('Осталось 10 минут');
+  if (timerLeft <= 0) {
+    timerLeft = 0;
+    timerRunning = false;
+    clearInterval(timerId);
+    timerId = null;
+    $('#timerToggle').textContent = 'Заново';
+    $('#timerHint').textContent = 'Время вышло.';
+    toast('Время сессии истекло');
+  }
+  timerPaint();
+}
+
+function timerStart(minutes) {
+  if (typeof minutes === 'number') timerLeft = minutes * 60;
+  timerRunning = true;
+  $('#timerToggle').textContent = 'Пауза';
+  $('#timerHint').textContent = 'Сессия идёт. За 10 минут до конца подам знак.';
+  clearInterval(timerId);
+  timerId = setInterval(timerTick, 1000);
+  timerPaint();
+}
+
+function timerStop() {
+  timerRunning = false;
+  clearInterval(timerId);
+  timerId = null;
+  $('#timerToggle').textContent = 'Продолжить';
+}
+
+function timerReset(minutes = TIMER_MINUTES) {
+  timerStop();
+  timerLeft = minutes * 60;
+  $('#timerToggle').textContent = 'Старт';
+  $('#timerHint').textContent = 'Готов, когда будешь готова.';
+  timerPaint();
+}
+
+/* ---------- режим «босс»: скрыть имена и суммы ---------- */
+
+let bossMode = false;
+
+function applyBoss() {
+  document.body.classList.toggle('is-boss', bossMode);
+  const btn = $('#bossMode');
+  if (btn) btn.setAttribute('aria-pressed', bossMode ? 'true' : 'false');
+  try { localStorage.setItem('psy-crm-boss', bossMode ? '1' : '0'); } catch (e) { /* нет хранилища */ }
+}
+
 /* ---------- отрисовка ---------- */
 
 function render() {
   renderToday();
   renderClients();
   renderSessions();
+  renderWeek();
 }
 
 function setView(view) {
@@ -638,6 +800,7 @@ function openClientCard(id) {
   const st = STATUS[c.status] || { label: '—', className: 'st-done' };
 
   $('#cardBody').innerHTML = `
+    ${bridgeFor(c.id)}
     <div class="card-head">
       <span class="avatar">${esc(initials(c.name))}</span>
       <div>
@@ -850,7 +1013,6 @@ tickClock();
 setInterval(tickClock, 1000);
 
 /* ---------- данные: копия и история ---------- */
-
 const historyDialog = $('#historyDialog');
 
 $('#exportData').addEventListener('click', () => {
@@ -907,9 +1069,48 @@ document.addEventListener('click', e => {
   if (menu && menu.hasAttribute('open') && !menu.contains(e.target)) menu.removeAttribute('open');
 });
 
+/* ---------- неделя: переключение ---------- */
+
+$('#weekPrev').addEventListener('click', () => { weekOffset -= 1; renderWeek(); });
+$('#weekNext').addEventListener('click', () => { weekOffset += 1; renderWeek(); });
+
+/* ---------- таймер ---------- */
+
+$('#timerBtn').addEventListener('click', () => {
+  if (timerLeft <= 0) timerReset();
+  else if (!timerRunning && !timerId) timerReset();
+  timerPaint();
+  $('#timerDialog').showModal();
+});
+
+$('#timerToggle').addEventListener('click', () => {
+  if (timerRunning) timerStop();
+  else if (timerLeft <= 0) { timerReset(); timerStart(); }
+  else timerStart();
+});
+
+$('#timerReset').addEventListener('click', () => timerReset());
+
+$$('[data-timer]').forEach(btn => btn.addEventListener('click', () => {
+  const minutes = Number(btn.dataset.timer);
+  timerReset(minutes);
+  timerStart(minutes);
+}));
+
+/* ---------- режим «босс» ---------- */
+
+$('#bossMode').addEventListener('click', () => {
+  bossMode = !bossMode;
+  applyBoss();
+  toast(bossMode ? 'Имена и суммы скрыты' : 'Имена и суммы снова видны');
+});
+
+try { bossMode = localStorage.getItem('psy-crm-boss') === '1'; } catch (e) { bossMode = false; }
+
 /* ---------- старт ---------- */
 
 load();
 rememberSnapshot(true);
 setView('today');
 render();
+applyBoss();

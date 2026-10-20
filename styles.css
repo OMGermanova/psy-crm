@@ -307,6 +307,94 @@ svg { width: 18px; height: 18px; flex: none; }
 .card-session .s-topic { flex: 1; }
 .card-actions { display: flex; gap: 8px; flex-wrap: wrap; }
 
+/* ---------- расписание недели ---------- */
+.week {
+  display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px;
+  margin: 0 0 20px;
+}
+.week-stat {
+  background: var(--panel); border: 1px solid var(--line); border-radius: 14px;
+  padding: 11px 14px; display: flex; align-items: baseline; gap: 8px;
+}
+.week-stat strong { font-size: 19px; font-weight: 700; letter-spacing: -.02em; }
+.week-stat span { font-size: 12.5px; color: var(--muted); }
+
+.week-panel { margin-top: 16px; }
+.week-nav { display: flex; gap: 6px; }
+.week-list { display: flex; flex-direction: column; gap: 4px; }
+
+.week-day {
+  display: grid; grid-template-columns: 62px 1fr; gap: 12px;
+  padding: 9px 12px; border-radius: 12px; background: #faf9f6;
+  align-items: start;
+}
+.week-day.is-today { background: #f2f6f2; box-shadow: inset 0 0 0 1px #d9e5da; }
+.week-day.is-past { opacity: .62; }
+
+.week-day-head { display: flex; align-items: baseline; gap: 6px; }
+.week-dow { font-size: 12px; color: var(--muted); text-transform: capitalize; }
+.week-num { font-size: 15px; font-weight: 700; }
+.week-day.is-today .week-num { color: var(--accent); }
+
+.week-slots { display: flex; flex-wrap: wrap; gap: 6px; }
+.week-slot {
+  display: inline-flex; align-items: baseline; gap: 7px;
+  padding: 5px 10px; border-radius: 9px; border: 1px solid var(--line);
+  background: var(--panel); font-family: inherit; cursor: pointer;
+  transition: border-color .15s, box-shadow .15s;
+}
+.week-slot:hover { border-color: #d8d2c6; box-shadow: var(--shadow); }
+.week-time { font-size: 12.5px; font-weight: 700; font-variant-numeric: tabular-nums; }
+.week-name { font-size: 12.5px; color: #5c564d; }
+.week-free { font-size: 12.5px; color: #a9a29a; }
+
+/* ---------- «мостик» в карточке клиента ---------- */
+.bridge {
+  display: flex; flex-direction: column; gap: 3px;
+  padding: 11px 13px; border-radius: 12px;
+  background: #f2f6f2; border: 1px solid #dde8de;
+}
+.bridge-label { font-size: 11.5px; color: #6d8a72; text-transform: uppercase; letter-spacing: .05em; }
+.bridge-text { font-size: 13.5px; color: #3f5142; white-space: pre-wrap; }
+
+/* ---------- таймер ---------- */
+.timer-form { align-items: center; text-align: center; }
+.timer-face {
+  font-size: 52px; font-weight: 700; letter-spacing: -.03em;
+  font-variant-numeric: tabular-nums; line-height: 1;
+  color: var(--ink); padding: 6px 0 2px;
+}
+.timer-face.is-warning { color: var(--warm); }
+.timer-face.is-over { color: #a8654a; }
+.timer-bar {
+  width: 100%; height: 6px; border-radius: 999px; background: #eae6de; overflow: hidden;
+}
+.timer-bar span {
+  display: block; height: 100%; width: 0;
+  background: var(--accent); border-radius: 999px; transition: width .9s linear;
+}
+.timer-hint { margin: 0; font-size: 13px; color: var(--muted); }
+.timer-presets { display: flex; gap: 6px; flex-wrap: wrap; justify-content: center; }
+.timer-form .dialog-actions { width: 100%; }
+
+/* ---------- режим «босс» ---------- */
+.boss-btn { flex: none; }
+body.is-boss .client-top strong,
+body.is-boss .week-name,
+body.is-boss .session-main strong,
+body.is-boss .s-client,
+body.is-boss .card-head h2,
+body.is-boss .avatar,
+body.is-boss .bridge-text,
+body.is-boss .card-note {
+  filter: blur(6px);
+}
+body.is-boss .stat-value,
+body.is-boss .s-amount,
+body.is-boss .week-time {
+  filter: blur(6px);
+}
+
 /* ---------- меню «Данные» ---------- */
 .menu { position: relative; }
 .menu > summary { list-style: none; cursor: pointer; user-select: none; }
@@ -386,6 +474,18 @@ svg { width: 18px; height: 18px; flex: none; }
   .menu { position: static; }
   .menu-panel { left: 0; right: 0; width: auto; top: calc(100% - 4px); }
   .toast { bottom: calc(88px + env(safe-area-inset-bottom)); }
+
+  .week { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; margin-bottom: 16px; }
+  .week-stat { padding: 9px 10px; flex-direction: column; gap: 1px; align-items: flex-start; }
+  .week-stat strong { font-size: 17px; }
+  .week-stat span { font-size: 11px; line-height: 1.25; }
+
+  .week-day { grid-template-columns: 46px 1fr; gap: 9px; padding: 8px 10px; }
+  .week-slot { padding: 6px 9px; }
+  .week-name { max-width: 130px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+  .timer-face { font-size: 46px; }
+  #timerBtn { flex: none; }
 
   .view-head h1 { font-size: 23px; }
   .view-sub { font-size: 13px; }
