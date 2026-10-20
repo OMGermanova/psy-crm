@@ -737,6 +737,8 @@ function deckAddCategory(name) {
 function deckDelete(index) {
   const list = deckData[deckCat] || [];
   if (index < 0 || index >= list.length) return;
+  const text = list[index];
+  if (!confirm('Удалить вопрос безвозвратно?\n\n«' + text + '»')) return;
   list.splice(index, 1);
   deckSave(deckData);
   deckRenderList();
@@ -828,9 +830,12 @@ function liveOpen(sessionId) {
   document.body.classList.add('is-live');
 
   timerReset(TIMER_MINUTES);
-  timerStart();
-  $('#liveTimerToggle').textContent = 'Пауза';
+  timerStop();
+  $('#liveTimerToggle').textContent = 'Старт';
   livePaint();
+
+  // запоминаем открытую сессию, чтобы вернуться, если окно случайно закрыли
+  try { localStorage.setItem('psy-crm-live', sessionId); } catch (e) { /* нет хранилища */ }
 
   setTimeout(() => $('#liveNote').focus(), 60);
 }
@@ -863,7 +868,30 @@ function liveClose(silent) {
   document.body.classList.remove('is-live');
   liveSessionId = null;
 
+  // сессия не завершена — помним её, чтобы можно было вернуться
+  try {
+    if (silent) localStorage.removeItem('psy-crm-live');
+  } catch (e) { /* нет хранилища */ }
+
   if (!silent) render();
+}
+
+function liveFinish() {
+  try { localStorage.removeItem('psy-crm-live'); } catch (e) { /* нет хранилища */ }
+  liveEl().hidden = true;
+  document.body.classList.remove('is-live');
+  liveSessionId = null;
+  timerStop();
+  render();
+}
+
+function liveResumeId() {
+  try {
+    const id = localStorage.getItem('psy-crm-live');
+    if (!id) return null;
+    const s = state.sessions.find(x => x.id === id);
+    return s ? id : null;
+  } catch (e) { return null; }
 }
 
 function livePaint() {
@@ -964,6 +992,8 @@ function applyBoss() {
 const SESSION_MINUTES = 50;
 
 function sessionState(s) {
+  if (s.missed) return 'missed';
+  if (s.done) return 'done';
   if (s.date < today()) return 'past';
   if (s.date > today()) return 'future';
   if (!s.time) return 'today';
@@ -981,12 +1011,14 @@ function sessionState(s) {
 }
 
 function sessionBadge(s) {
+  if (s.missed) return '<span class="pill pill-missed">Не состоялась</span>';
   if (s.paid) return '<span class="pill pill-paid">Оплачено</span>';
 
   const st = sessionState(s);
   if (st === 'now') return '<span class="pill pill-now">Сейчас идёт</span>';
   if (st === 'past') return '<span class="pill pill-unpaid">Не оплачено</span>';
   if (st === 'soon') return '<span class="pill pill-soon">Скоро</span>';
+  if (st === 'done') return '<span class="pill pill-paid">Проведена</span>';
   return '<span></span>';
 }
 
@@ -1028,9 +1060,9 @@ function renderToday() {
   const debt = state.sessions.filter(s => !s.paid && s.date <= t)
     .reduce((sum, s) => sum + (Number(s.amount) || 0), 0);
 
-  // ближайшая — только та, что ещё не закончилась
+  // ближайшая — только та, что ещё не закончилась и не отменена
   const next = [...state.sessions]
-    .filter(s => sessionState(s) !== 'past')
+    .filter(s => ['past', 'missed', 'done'].indexOf(sessionState(s)) === -1)
     .sort((a, b) => (a.date + (a.time || '')).localeCompare(b.date + (b.time || '')))[0];
 
   const nextToday = todaysLeft[0];
@@ -1074,7 +1106,7 @@ function renderToday() {
   `;
 
   const upcoming = [...state.sessions]
-    .filter(s => sessionState(s) !== 'past')
+    .filter(s => ['past', 'missed', 'done'].indexOf(sessionState(s)) === -1)
     .sort((a, b) => (a.date + (a.time || '')).localeCompare(b.date + (b.time || '')))
     .slice(0, 6);
 
@@ -1308,7 +1340,13 @@ document.addEventListener('click', e => {
 
   if (target.dataset.openSession) {
     const session = state.sessions.find(s => s.id === target.dataset.openSession);
-    if (session) openSessionForm(session);
+    if (!session) return;
+    // если эта сессия была открыта в режиме сессии — возвращаемся в неё
+    if (liveResumeId() === session.id) {
+      liveOpen(session.id);
+      return;
+    }
+    openSessionForm(session);
     return;
   }
 
@@ -1615,9 +1653,13 @@ $('#liveExit').addEventListener('click', () => {
 $('#liveDone').addEventListener('click', () => {
   liveSave();
   const s = state.sessions.find(x => x.id === liveSessionId);
-  if (s && !s.topic) { s.topic = 'Сессия'; }
-  if (s) save();
-  liveClose();
+  if (s) {
+    if (!s.topic) s.topic = 'Сессия';
+    s.done = true;
+    s.missed = false;
+    save();
+  }
+  liveFinish();
   toast('Сессия завершена');
 });
 
@@ -1630,9 +1672,10 @@ $('#liveMissed').addEventListener('click', () => {
     s.amount = 0;
     s.paid = false;
     s.missed = true;
+    s.done = false;
     save();
   }
-  liveClose();
+  liveFinish();
   toast('Отмечено: не состоялась');
 });
 
@@ -1650,8 +1693,8 @@ $('#liveTimerToggle').addEventListener('click', () => {
 
 $('#liveTimerReset').addEventListener('click', () => {
   timerReset(TIMER_MINUTES);
-  timerStart();
-  $('#liveTimerToggle').textContent = 'Пауза';
+  timerStop();
+  $('#liveTimerToggle').textContent = 'Старт';
   livePaint();
 });
 

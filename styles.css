@@ -225,7 +225,12 @@ svg { width: 18px; height: 18px; flex: none; }
 .pill-unpaid { background: #fbeee7; color: #a8654a; }
 .pill-now { background: #e7f1e9; color: #3f6b4d; box-shadow: 0 0 0 3px rgba(95, 127, 106, .16); }
 .pill-soon { background: #edf1f8; color: #4a5b7a; }
+.pill-missed { background: #f0eee9; color: #7d766c; }
 .session-row.is-now { background: #f2f6f2; box-shadow: inset 0 0 0 1px #d9e5da; }
+
+/* кнопка «Начать сессию» в шапке */
+.btn-live { background: #5f7f6a; color: #fff; border-color: #5f7f6a; }
+.btn-live:hover { background: #527260; border-color: #527260; }
 .st-new { background: #edf1f8; color: #4a5b7a; }
 .st-active { background: #e7f1e9; color: #3f6b4d; }
 .st-paused { background: #fdf3e3; color: #97703a; }
@@ -481,8 +486,16 @@ body.is-live { overflow: hidden; }
   padding: 6px 0 2px;
 }
 .live-center .live-clock { margin-left: 0; font-size: 64px; }
-.live-clock-tools { display: flex; gap: 6px; }
+.live-clock-tools { display: flex; gap: 6px; flex-wrap: wrap; justify-content: center; }
 .live-clock-tools .live-btn { padding: 6px 13px; font-size: 12.5px; }
+.live-btn-start { background: var(--accent); color: #fff; border-color: var(--accent); }
+.live-btn-start:hover { background: #4f6b58; border-color: #4f6b58; }
+.live-btn-deck { background: #6f5d94; color: #fff; border-color: #6f5d94; }
+.live-btn-deck:hover { background: #5f4f81; border-color: #5f4f81; }
+
+/* меню «Данные» внизу */
+.menu-foot { margin-bottom: 4px; }
+.menu-panel-up { top: auto; bottom: calc(100% + 6px); }
 
 /* ---------- выбор клиента для старта ---------- */
 .view-head-row { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
@@ -592,8 +605,13 @@ body.is-boss .week-time {
 }
 .toast.is-visible { opacity: 1; transform: translate(-50%, 0); }
 
-/* ---------- подвал с демо-плашкой: нужен только на телефоне ---------- */
-.app-foot { display: none; }
+/* ---------- подвал: меню «Данные» и демо-плашка ---------- */
+.app-foot {
+  display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+  margin-top: 30px; padding-top: 18px; border-top: 1px solid var(--line);
+}
+.app-foot .demo-badge { display: none; }
+.app-foot .link-btn { display: none; }
 
 /* ---------- мобильная версия ---------- */
 @media (max-width: 900px) {
@@ -712,9 +730,12 @@ body.is-boss .week-time {
   .card-sessions { max-height: none; }
 
   .app-foot {
-    display: flex; flex-direction: column; align-items: center; gap: 6px;
+    display: flex; flex-direction: column; align-items: center; gap: 8px;
     margin-top: 26px; text-align: center;
   }
+  .app-foot .demo-badge { display: block; }
+  .app-foot .link-btn { display: inline; }
+  .menu-panel-up { left: 0; right: 0; width: auto; bottom: calc(100% + 6px); }
 
   /* режим сессии на телефоне */
   .live-top { padding: 10px 14px; gap: 10px; flex-wrap: wrap; }

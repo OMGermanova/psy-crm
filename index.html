@@ -75,6 +75,13 @@
           Новый клиент
         </button>
 
+        <button class="btn btn-live" id="startSessionBtn" type="button" title="Начать сессию с любым клиентом">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="9" /><path d="M10 8.5v7l6-3.5z" fill="currentColor" stroke="none" />
+          </svg>
+          Начать сессию
+        </button>
+
         <button class="btn btn-soft" id="timerBtn" type="button" title="Таймер сессии">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">
             <circle cx="12" cy="13" r="8" /><path d="M12 9v4l2.5 2.5" /><path d="M9 2h6" />
@@ -87,55 +94,15 @@
             <path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12Z" /><circle cx="12" cy="12" r="3" />
           </svg>
         </button>
-
-        <details class="menu" id="dataMenu">
-          <summary class="btn btn-soft" title="Копия данных и история изменений">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">
-              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><path d="m7 10 5 5 5-5" /><path d="M12 15V3" />
-            </svg>
-            Данные
-          </summary>
-          <div class="menu-panel">
-            <button class="menu-item" id="exportData" type="button">
-              <strong>Сохранить копию</strong>
-              <span>Скачать файл со всеми клиентами и сессиями</span>
-            </button>
-            <button class="menu-item" id="importData" type="button">
-              <strong>Загрузить копию</strong>
-              <span>Восстановить данные из ранее сохранённого файла</span>
-            </button>
-            <button class="menu-item" id="openHistory" type="button">
-              <strong>История изменений</strong>
-              <span>Вернуть состояние до последних правок</span>
-            </button>
-            <div class="menu-sep"></div>
-            <button class="menu-item" id="exportCsv" type="button">
-              <strong>Таблица для Excel</strong>
-              <span>Два файла .csv — клиенты и сессии</span>
-            </button>
-            <button class="menu-item" id="exportPrint" type="button">
-              <strong>Версия для печати</strong>
-              <span>Сводка в новом окне — можно сохранить в PDF</span>
-            </button>
-          </div>
-        </details>
       </header>
 
       <div class="views">
         <section class="view is-active" id="view-today">
-          <div class="view-head view-head-row">
-            <div>
-              <h1 id="greeting">Сегодня</h1>
-              <p class="view-sub">
-                <span id="todayDate"></span><span class="clock" id="clock" title="Текущее время">--:--:--</span>
-              </p>
-            </div>
-            <button class="btn btn-primary btn-lg" id="startSessionBtn" type="button">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <circle cx="12" cy="12" r="9" /><path d="M10 8.5v7l6-3.5z" fill="currentColor" stroke="none" />
-              </svg>
-              Начать сессию
-            </button>
+          <div class="view-head">
+            <h1 id="greeting">Сегодня</h1>
+            <p class="view-sub">
+              <span id="todayDate"></span><span class="clock" id="clock" title="Текущее время">--:--:--</span>
+            </p>
           </div>
           <div class="stats" id="stats"></div>
           <div class="week" id="week"></div>
@@ -180,6 +147,37 @@
       </div>
 
       <div class="app-foot">
+        <details class="menu menu-foot" id="dataMenu">
+          <summary class="btn btn-soft" title="Копия данных и история изменений">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><path d="m7 10 5 5 5-5" /><path d="M12 15V3" />
+            </svg>
+            Данные
+          </summary>
+          <div class="menu-panel menu-panel-up">
+            <button class="menu-item" id="exportData" type="button">
+              <strong>Сохранить копию</strong>
+              <span>Скачать файл со всеми клиентами и сессиями</span>
+            </button>
+            <button class="menu-item" id="importData" type="button">
+              <strong>Загрузить копию</strong>
+              <span>Восстановить данные из ранее сохранённого файла</span>
+            </button>
+            <button class="menu-item" id="openHistory" type="button">
+              <strong>История изменений</strong>
+              <span>Вернуть состояние до последних правок</span>
+            </button>
+            <div class="menu-sep"></div>
+            <button class="menu-item" id="exportCsv" type="button">
+              <strong>Таблица для Excel</strong>
+              <span>Два файла .csv — клиенты и сессии</span>
+            </button>
+            <button class="menu-item" id="exportPrint" type="button">
+              <strong>Версия для печати</strong>
+              <span>Сводка в новом окне — можно сохранить в PDF</span>
+            </button>
+          </div>
+        </details>
         <span class="demo-badge">Демо-версия. Данные ненастоящие и живут только в этом браузере.</span>
         <button class="link-btn" data-reset-demo type="button">Сбросить демо-данные</button>
       </div>
@@ -342,7 +340,6 @@
         <strong id="liveName">—</strong>
       </div>
       <div class="live-actions">
-        <button class="live-btn" type="button" id="liveDeck" title="Колода">Колода</button>
         <button class="live-btn live-btn-exit" type="button" id="liveExit">Выйти</button>
       </div>
     </div>
@@ -351,8 +348,9 @@
       <div class="live-center">
         <div class="live-clock" id="liveClock">50:00</div>
         <div class="live-clock-tools">
-          <button class="live-btn" type="button" id="liveTimerToggle">Пауза</button>
+          <button class="live-btn live-btn-start" type="button" id="liveTimerToggle">Старт</button>
           <button class="live-btn" type="button" id="liveTimerReset">Сбросить</button>
+          <button class="live-btn live-btn-deck" type="button" id="liveDeck">Колода</button>
         </div>
       </div>
 
