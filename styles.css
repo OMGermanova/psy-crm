@@ -92,7 +92,7 @@ svg { width: 18px; height: 18px; flex: none; }
 }
 .link-btn:hover { color: var(--warm); }
 
-.main { padding: 26px 34px 60px; max-width: 1220px; width: 100%; }
+.main { padding: 26px 34px 34px; max-width: 1220px; width: 100%; }
 
 /* ---------- topbar ---------- */
 .topbar { display: flex; align-items: center; gap: 14px; margin-bottom: 30px; }
@@ -540,6 +540,85 @@ body.is-live { overflow: hidden; }
 .timer-presets { display: flex; gap: 6px; flex-wrap: wrap; justify-content: center; }
 .timer-form .dialog-actions { width: 100%; }
 
+/* ---------- две колонки на главной ---------- */
+.today-cols {
+  display: grid; grid-template-columns: minmax(0, 1.35fr) minmax(0, 1fr);
+  gap: 16px; align-items: start;
+}
+.today-cols .panel { margin-top: 0; }
+.today-cols .upcoming {
+  max-height: calc(100vh - 560px); min-height: 110px; overflow-y: auto;
+  scrollbar-width: thin;
+}
+.panel-tools { display: flex; gap: 6px; }
+
+/* на невысоких экранах ещё компактнее */
+@media (max-height: 820px) and (min-width: 901px) {
+  .stats { margin: 16px 0 18px; }
+  .stat { padding: 13px 16px; }
+  .stat-value { font-size: 20px; }
+  .today-cols .upcoming { max-height: calc(100vh - 570px); }
+}
+
+/* краткий вид недели */
+.week-brief { display: flex; flex-direction: column; gap: 10px; }
+.brief-row { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; }
+.brief-day {
+  display: flex; flex-direction: column; align-items: center; gap: 2px;
+  padding: 8px 2px 6px; border-radius: 10px; border: 1px solid var(--line);
+  background: #faf9f6; font-family: inherit; cursor: pointer;
+  transition: border-color .15s, background .15s;
+}
+.brief-day:hover { border-color: #d8d2c6; background: #f6f3ed; }
+.brief-day.is-today { background: #f2f6f2; border-color: #d9e5da; }
+.brief-day.is-past { opacity: .55; }
+.brief-dow { font-size: 10.5px; color: var(--muted); text-transform: capitalize; }
+.brief-num { font-size: 14px; font-weight: 700; letter-spacing: -.02em; }
+.brief-day.is-today .brief-num { color: var(--accent); }
+.brief-dot {
+  font-size: 10px; font-weight: 700; color: #fff; line-height: 1;
+  min-width: 15px; height: 15px; border-radius: 999px;
+  display: flex; align-items: center; justify-content: center;
+  background: transparent;
+}
+.brief-dot.is-on { background: var(--accent); }
+.brief-sum { margin: 0; font-size: 12.5px; color: var(--muted); }
+
+/* календарь */
+.cal-nav { display: flex; gap: 6px; align-items: center; margin: 0 0 16px; }
+.week-day.is-busiest { background: #fbf7ef; box-shadow: inset 0 0 0 1px #ece2cf; }
+.week-peak {
+  font-size: 10px; text-transform: uppercase; letter-spacing: .05em;
+  color: #9a7b4a; background: #f3e9d8; padding: 1px 5px; border-radius: 999px;
+  margin-left: 2px;
+}
+
+/* кнопка «Начать» в строке встречи */
+.session-row { display: flex; align-items: stretch; gap: 6px; padding: 0; }
+.session-hit {
+  flex: 1; display: grid; grid-template-columns: 76px 1fr auto;
+  align-items: center; gap: 12px; padding: 12px 14px;
+  background: transparent; border: 0; text-align: left; font-family: inherit;
+  border-radius: inherit;
+}
+.session-start {
+  flex: none; align-self: center; margin-right: 10px;
+  padding: 6px 11px; border-radius: 9px; border: 1px solid #cfdcd2;
+  background: #f2f6f2; color: #3f6b4d; font-size: 12.5px; font-weight: 600;
+  font-family: inherit; transition: background .15s;
+}
+.session-start:hover { background: #e4eee6; }
+
+/* крестик в диалоге */
+.dialog-x {
+  position: absolute; top: 10px; right: 10px; width: 30px; height: 30px;
+  border: 0; border-radius: 8px; background: transparent;
+  color: var(--muted); font-size: 20px; line-height: 1;
+  display: flex; align-items: center; justify-content: center;
+}
+.dialog-x:hover { background: #f3f0ea; color: var(--ink); }
+.dialog-form { position: relative; }
+
 /* ---------- режим «босс» ---------- */
 .boss-btn { flex: none; }
 body.is-boss .client-top strong,
@@ -608,7 +687,7 @@ body.is-boss .week-time {
 /* ---------- подвал: меню «Данные» и демо-плашка ---------- */
 .app-foot {
   display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
-  margin-top: 30px; padding-top: 18px; border-top: 1px solid var(--line);
+  margin-top: 18px; padding-top: 12px; border-top: 1px solid var(--line);
 }
 .app-foot .demo-badge { display: none; }
 .app-foot .link-btn { display: none; }
@@ -756,6 +835,13 @@ body.is-boss .week-time {
   .view-head-row { flex-direction: column; align-items: stretch; }
   #startSessionBtn { width: 100%; }
   .start-list { max-height: 52vh; }
+
+  .today-cols { grid-template-columns: 1fr; gap: 14px; }
+  .brief-dow { font-size: 9.5px; }
+  .brief-num { font-size: 13px; }
+  .session-row { flex-direction: column; gap: 0; }
+  .session-hit { grid-template-columns: 1fr auto; gap: 8px; padding: 12px 13px; }
+  .session-start { margin: 0 10px 10px; align-self: stretch; }
 }
 
 @media (max-width: 420px) {

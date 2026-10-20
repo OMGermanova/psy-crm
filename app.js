@@ -469,58 +469,90 @@ function renderWeek() {
     return iso(d);
   });
   const t = today();
-
   const end = days[6];
-  const label = start.toLocaleDateString('ru-RU', { day: 'numeric', month: 'long' })
-    + ' — ' + parseDate(end).toLocaleDateString('ru-RU', { day: 'numeric', month: 'long' });
-  $('#weekTitle').textContent = weekOffset === 0 ? 'Расписание недели' : 'Неделя ' + label;
 
   const total = state.sessions.filter(s => s.date >= days[0] && s.date <= end);
-  const busy = total.length;
-  const bookedDays = new Set(total.map(s => s.date)).size;
-  const unpaidWeek = total.filter(s => !s.paid).reduce((sum, s) => sum + (Number(s.amount) || 0), 0);
   const busiest = days
     .map(day => ({ day, count: total.filter(s => s.date === day).length }))
     .sort((a, b) => b.count - a.count)[0];
 
-  $('#weekList').innerHTML = days.map(day => {
-    const list = state.sessions
-      .filter(s => s.date === day)
-      .sort((a, b) => (a.time || '').localeCompare(b.time || ''));
-    const isToday = day === t;
-    const isPast = day < t;
+  /* --- полный календарь --- */
+  const calTitle = $('#calTitle');
+  if (calTitle) {
+    const label = start.toLocaleDateString('ru-RU', { day: 'numeric', month: 'long' })
+      + ' — ' + parseDate(end).toLocaleDateString('ru-RU', { day: 'numeric', month: 'long' });
+    calTitle.textContent = weekOffset === 0 ? 'Эта неделя' : 'Неделя ' + label;
 
-    return `
-      <div class="week-day${isToday ? ' is-today' : ''}${isPast ? ' is-past' : ''}">
-        <div class="week-day-head">
-          <span class="week-dow">${parseDate(day).toLocaleDateString('ru-RU', { weekday: 'short' })}</span>
-          <span class="week-num">${parseDate(day).getDate()}</span>
-        </div>
-        <div class="week-slots">
-          ${list.length
-            ? list.map(s => {
-                const c = clientById(s.clientId) || {};
-                return `
-                  <button class="week-slot" data-open-session="${s.id}" type="button">
-                    <span class="week-time">${esc(s.time || '—')}</span>
-                    <span class="week-name">${esc(c.name || 'Клиент удалён')}</span>
-                  </button>`;
-              }).join('')
-            : '<span class="week-free">свободно</span>'}
-        </div>
-      </div>`;
-  }).join('');
+    const sub = $('#calSub');
+    if (sub) {
+      const parts = [`${total.length} ${plural(total.length, 'встреча', 'встречи', 'встреч')}`];
+      const booked = new Set(total.map(s => s.date)).size;
+      parts.push(`${booked} ${plural(booked, 'день', 'дня', 'дней')} с встречами`);
+      if (busiest && busiest.count) {
+        const bd = parseDate(busiest.day);
+        parts.push('загруженнее всего ' + bd.toLocaleDateString('ru-RU', { weekday: 'long', day: 'numeric' }) + ` (${busiest.count})`);
+      }
+      sub.textContent = parts.join(' · ');
+    }
+  }
 
-  const summary = $('#week');
-  if (summary) {
-    const busiestHint = busiest && busiest.count
-      ? parseDate(busiest.day).toLocaleDateString('ru-RU', { weekday: 'short' }) + ', ' + parseDate(busiest.day).getDate()
-      : '—';
-    summary.innerHTML = `
-      <div class="week-stat"><strong>${busy}</strong><span>${plural(busy, 'встреча', 'встречи', 'встреч')} за неделю</span></div>
-      <div class="week-stat"><strong>${bookedDays}<em>/7</em></strong><span>дней с встречами</span></div>
-      <div class="week-stat"><strong>${busiest && busiest.count ? busiestHint : '—'}</strong><span>самый занятый день</span></div>
-      <div class="week-stat"><strong>${money(unpaidWeek)}</strong><span>не оплачено за неделю</span></div>
+  const listEl = $('#weekList');
+  if (listEl) {
+    listEl.innerHTML = days.map(day => {
+      const list = state.sessions
+        .filter(s => s.date === day)
+        .sort((a, b) => (a.time || '').localeCompare(b.time || ''));
+      const isToday = day === t;
+      const isPast = day < t;
+      const isBusiest = busiest && busiest.day === day && busiest.count > 0;
+
+      return `
+        <div class="week-day${isToday ? ' is-today' : ''}${isPast ? ' is-past' : ''}${isBusiest ? ' is-busiest' : ''}">
+          <div class="week-day-head">
+            <span class="week-dow">${parseDate(day).toLocaleDateString('ru-RU', { weekday: 'short' })}</span>
+            <span class="week-num">${parseDate(day).getDate()}</span>
+            ${isBusiest ? '<span class="week-peak">пик</span>' : ''}
+          </div>
+          <div class="week-slots">
+            ${list.length
+              ? list.map(s => {
+                  const c = clientById(s.clientId) || {};
+                  return `
+                    <button class="week-slot" data-open-session="${s.id}" type="button">
+                      <span class="week-time">${esc(s.time || '—')}</span>
+                      <span class="week-name">${esc(c.name || 'Клиент удалён')}</span>
+                    </button>`;
+                }).join('')
+              : '<span class="week-free">свободно</span>'}
+          </div>
+        </div>`;
+    }).join('');
+  }
+
+  /* --- краткий вид на главной --- */
+  const brief = $('#weekBrief');
+  if (brief) {
+    const busyDays = days.filter(day => state.sessions.some(s => s.date === day));
+    brief.innerHTML = `
+      <div class="brief-row">
+        ${days.map(day => {
+          const count = state.sessions.filter(s => s.date === day).length;
+          const isToday = day === t;
+          const isPast = day < t;
+          return `
+            <button class="brief-day${isToday ? ' is-today' : ''}${isPast ? ' is-past' : ''}${count ? ' has-items' : ''}"
+              data-open-day="${day}" type="button" title="${count ? count + ' встреч' : 'свободно'}">
+              <span class="brief-dow">${parseDate(day).toLocaleDateString('ru-RU', { weekday: 'short' })}</span>
+              <span class="brief-num">${parseDate(day).getDate()}</span>
+              <span class="brief-dot${count ? ' is-on' : ''}">${count || ''}</span>
+            </button>`;
+        }).join('')}
+      </div>
+      <p class="brief-sum">
+        ${total.length
+          ? `${total.length} ${plural(total.length, 'встреча', 'встречи', 'встреч')} · ${busyDays.length} ${plural(busyDays.length, 'день', 'дня', 'дней')} занято`
+          : 'На этой неделе пока пусто'}
+      </p>
     `;
   }
 }
@@ -1116,14 +1148,17 @@ function renderToday() {
         const badge = sessionBadge(s);
         const nowClass = sessionState(s) === 'now' ? ' is-now' : '';
         return `
-          <button class="session-row${nowClass}" data-open-session="${s.id}" type="button">
-            <span class="session-date"><strong>${esc(relDay(s.date))}</strong><span>${s.time ? esc(s.time) : 'время не задано'}</span></span>
-            <span class="session-main">
-              <strong>${esc(c.name || 'Клиент удалён')}</strong>
-              <span>${esc(s.topic || 'без темы')}</span>
-            </span>
-            ${badge}
-          </button>`;
+          <div class="session-row${nowClass}">
+            <button class="session-hit" data-open-session="${s.id}" type="button">
+              <span class="session-date"><strong>${esc(relDay(s.date))}</strong><span>${s.time ? esc(s.time) : 'время не задано'}</span></span>
+              <span class="session-main">
+                <strong>${esc(c.name || 'Клиент удалён')}</strong>
+                <span>${esc(s.topic || 'без темы')}</span>
+              </span>
+              ${badge}
+            </button>
+            <button class="session-start" data-start-session="${s.id}" type="button" title="Начать сессию">Начать</button>
+          </div>`;
       }).join('')
     : '<div class="empty">Запланированных встреч нет. Добавь сессию кнопкой «+ Сессия».</div>';
 }
@@ -1327,7 +1362,7 @@ $$('[data-reset-demo]').forEach(btn => btn.addEventListener('click', () => {
 }));
 
 document.addEventListener('click', e => {
-  const target = e.target.closest('[data-status],[data-open-client],[data-open-session],[data-toggle-paid],[data-del-session],[data-action],[data-close],[data-close-card]');
+  const target = e.target.closest('[data-status],[data-open-client],[data-open-session],[data-start-session],[data-toggle-paid],[data-del-session],[data-action],[data-close],[data-close-card]');
   if (!target) return;
 
   if (target.dataset.status) {
@@ -1337,6 +1372,15 @@ document.addEventListener('click', e => {
   }
 
   if (target.dataset.openClient) { openClientCard(target.dataset.openClient); return; }
+
+  if (target.dataset.startSession) {
+    const session = state.sessions.find(s => s.id === target.dataset.startSession);
+    if (session) {
+      if (liveResumeId() === session.id) liveOpen(session.id);
+      else liveOpen(session.id);
+    }
+    return;
+  }
 
   if (target.dataset.openSession) {
     const session = state.sessions.find(s => s.id === target.dataset.openSession);
@@ -1552,6 +1596,23 @@ document.addEventListener('click', e => {
 $('#weekPrev').addEventListener('click', () => { weekOffset -= 1; renderWeek(); });
 $('#weekNext').addEventListener('click', () => { weekOffset += 1; renderWeek(); });
 
+const calTodayBtn = $('#calToday');
+if (calTodayBtn) calTodayBtn.addEventListener('click', () => { weekOffset = 0; renderWeek(); });
+
+const openCalBtn = $('#openCalendar');
+if (openCalBtn) openCalBtn.addEventListener('click', () => setView('calendar'));
+
+const moreBtn = $('#upcomingMore');
+if (moreBtn) moreBtn.addEventListener('click', () => setView('sessions'));
+
+document.addEventListener('click', e => {
+  const dayBtn = e.target.closest('[data-open-day]');
+  if (!dayBtn) return;
+  weekOffset = 0;
+  setView('calendar');
+  renderWeek();
+});
+
 /* ---------- плитки статистики ---------- */
 
 $('#stats').addEventListener('click', e => {
@@ -1632,6 +1693,10 @@ $('#timerToggle').addEventListener('click', () => {
 });
 
 $('#timerReset').addEventListener('click', () => timerReset());
+
+document.addEventListener('click', e => {
+  if (e.target.closest('[data-close-timer]')) $('#timerDialog').close();
+});
 
 $$('[data-timer]').forEach(btn => btn.addEventListener('click', () => {
   const minutes = Number(btn.dataset.timer);
