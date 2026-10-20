@@ -123,11 +123,19 @@
 
       <div class="views">
         <section class="view is-active" id="view-today">
-          <div class="view-head">
-            <h1 id="greeting">Сегодня</h1>
-            <p class="view-sub">
-              <span id="todayDate"></span><span class="clock" id="clock" title="Текущее время">--:--:--</span>
-            </p>
+          <div class="view-head view-head-row">
+            <div>
+              <h1 id="greeting">Сегодня</h1>
+              <p class="view-sub">
+                <span id="todayDate"></span><span class="clock" id="clock" title="Текущее время">--:--:--</span>
+              </p>
+            </div>
+            <button class="btn btn-primary btn-lg" id="startSessionBtn" type="button">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="12" cy="12" r="9" /><path d="M10 8.5v7l6-3.5z" fill="currentColor" stroke="none" />
+              </svg>
+              Начать сессию
+            </button>
           </div>
           <div class="stats" id="stats"></div>
           <div class="week" id="week"></div>
@@ -333,7 +341,6 @@
         <span class="live-label">Сессия</span>
         <strong id="liveName">—</strong>
       </div>
-      <div class="live-clock" id="liveClock">50:00</div>
       <div class="live-actions">
         <button class="live-btn" type="button" id="liveDeck" title="Колода">Колода</button>
         <button class="live-btn live-btn-exit" type="button" id="liveExit">Выйти</button>
@@ -341,19 +348,29 @@
     </div>
 
     <div class="live-body">
+      <div class="live-center">
+        <div class="live-clock" id="liveClock">50:00</div>
+        <div class="live-clock-tools">
+          <button class="live-btn" type="button" id="liveTimerToggle">Пауза</button>
+          <button class="live-btn" type="button" id="liveTimerReset">Сбросить</button>
+        </div>
+      </div>
+
       <section class="live-hints" id="liveHints" hidden></section>
 
       <section class="live-bridge" id="liveBridge"></section>
 
       <section class="live-deck" id="liveDeckBox" hidden>
         <div class="deck-cats" id="deckCats"></div>
-        <div class="deck-card" id="deckCard">
-          <p class="deck-q" id="deckQ">Нажмите «Вытянуть»</p>
-          <div class="deck-tools">
-            <button class="btn btn-primary" type="button" id="deckDraw">Вытянуть</button>
-            <button class="btn btn-ghost" type="button" id="deckClose">Свернуть</button>
-          </div>
-        </div>
+        <div class="deck-list" id="deckList"></div>
+        <form class="deck-add" id="deckAddForm">
+          <input id="deckNewQ" placeholder="Свой вопрос" autocomplete="off" />
+          <button class="btn btn-soft" type="submit">Добавить</button>
+        </form>
+        <form class="deck-add" id="deckCatForm">
+          <input id="deckNewCat" placeholder="Новая категория" autocomplete="off" />
+          <button class="btn btn-soft" type="submit">Добавить</button>
+        </form>
       </section>
 
       <label class="live-field">
@@ -375,6 +392,20 @@
       </div>
     </div>
   </div>
+
+  <!-- Выбор клиента для старта сессии -->
+  <dialog class="dialog" id="startDialog">
+    <div class="dialog-form">
+      <h2>Начать сессию</h2>
+      <p class="view-sub" style="margin:-6px 0 2px">Выберите клиента — откроется режим сессии.</p>
+      <input class="start-search" id="startSearch" placeholder="Поиск по имени" autocomplete="off" />
+      <div class="start-list" id="startList"></div>
+      <div class="dialog-actions">
+        <button class="btn btn-ghost" type="button" data-close-start>Отмена</button>
+        <button class="btn btn-primary" type="button" id="startNewClient">Новый клиент</button>
+      </div>
+    </div>
+  </dialog>
 
   <input type="file" id="importFile" accept="application/json,.json" hidden />
   <script src="app.js"></script>

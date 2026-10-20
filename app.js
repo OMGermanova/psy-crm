@@ -674,31 +674,72 @@ function deckSave(data) {
 }
 
 let deckData = deckLoad() || JSON.parse(JSON.stringify(DECK_BASE));
-let deckCat = 'any';
-let deckLast = '';
+let deckCat = 'anxiety';
 
-function deckPool() {
-  if (deckCat === 'any') return Object.values(deckData).flat();
-  return deckData[deckCat] || [];
-}
-
-function deckDrawOne() {
-  const pool = deckPool().filter(q => q !== deckLast);
-  if (!pool.length) {
-    const all = deckPool();
-    return all.length ? all[0] : 'Вопросов пока нет. Добавьте свои.';
-  }
-  const pick = pool[Math.floor(Math.random() * pool.length)];
-  deckLast = pick;
-  return pick;
+function deckCatLabel(key) {
+  const found = DECK_CATS.find(([k]) => k === key);
+  return found ? found[1] : key;
 }
 
 function deckRenderCats() {
   const box = $('#deckCats');
   if (!box) return;
-  box.innerHTML = [['any', 'Любая']].concat(DECK_CATS)
-    .map(([key, label]) => `<button class="chip${deckCat === key ? ' is-active' : ''}" data-deck-cat="${key}" type="button">${label}</button>`)
-    .join('');
+
+  const keys = Object.keys(deckData);
+  if (!keys.includes(deckCat)) deckCat = keys[0] || '';
+
+  box.innerHTML = keys.map(key =>
+    `<button class="chip${deckCat === key ? ' is-active' : ''}" data-deck-cat="${esc(key)}" type="button">${esc(deckCatLabel(key))}</button>`
+  ).join('');
+}
+
+function deckRenderList() {
+  const box = $('#deckList');
+  if (!box) return;
+
+  const list = deckData[deckCat] || [];
+  box.innerHTML = list.length
+    ? list.map((q, i) => `
+        <div class="deck-item">
+          <span class="deck-text">${esc(q)}</span>
+          <button class="deck-del" data-deck-del="${i}" type="button" title="Удалить">×</button>
+        </div>`).join('')
+    : '<div class="empty" style="padding:12px">В этой категории пока пусто</div>';
+}
+
+function deckRenderAll() {
+  deckRenderCats();
+  deckRenderList();
+}
+
+function deckAddQuestion(text) {
+  const q = String(text || '').trim();
+  if (!q || !deckCat) return false;
+  deckData[deckCat] = deckData[deckCat] || [];
+  deckData[deckCat].push(q);
+  deckSave(deckData);
+  deckRenderList();
+  return true;
+}
+
+function deckAddCategory(name) {
+  const n = String(name || '').trim();
+  if (!n) return false;
+  const key = 'c' + Date.now().toString(36);
+  deckData[key] = [];
+  DECK_CATS.push([key, n]);
+  deckSave(deckData);
+  deckCat = key;
+  deckRenderAll();
+  return true;
+}
+
+function deckDelete(index) {
+  const list = deckData[deckCat] || [];
+  if (index < 0 || index >= list.length) return;
+  list.splice(index, 1);
+  deckSave(deckData);
+  deckRenderList();
 }
 
 /* ---------- подсказки из данных ---------- */
@@ -780,10 +821,7 @@ function liveOpen(sessionId) {
     hintBox.hidden = !hints.length;
   }
 
-  deckCat = 'any';
-  deckLast = '';
-  deckRenderCats();
-  $('#deckQ').textContent = 'Нажмите «Вытянуть»';
+  deckRenderAll();
   $('#liveDeckBox').hidden = true;
 
   liveEl().hidden = false;
@@ -791,6 +829,7 @@ function liveOpen(sessionId) {
 
   timerReset(TIMER_MINUTES);
   timerStart();
+  $('#liveTimerToggle').textContent = 'Пауза';
   livePaint();
 
   setTimeout(() => $('#liveNote').focus(), 60);
@@ -835,6 +874,78 @@ function livePaint() {
   clock.textContent = `${pad(m)}:${pad(s)}`;
   clock.classList.toggle('is-warning', timerLeft <= 600 && timerLeft > 0);
   clock.classList.toggle('is-over', timerLeft <= 0);
+}
+
+/* ---------- старт сессии для любого клиента ---------- */
+
+function sessionForNow(clientId) {
+  const t = today();
+  // берём сегодняшнюю незавершённую встречу, иначе создаём новую
+  const existing = state.sessions.find(s => s.clientId === clientId && s.date === t);
+  if (existing) return existing;
+
+  const c = clientById(clientId);
+  const session = {
+    id: uid(),
+    clientId,
+    date: t,
+    time: `${pad(new Date().getHours())}:${pad(new Date().getMinutes())}`,
+    topic: '',
+    note: '',
+    plan: '',
+    amount: c ? (Number(c.price) || 0) : 0,
+    paid: false,
+  };
+  state.sessions.push(session);
+  save();
+  return session;
+}
+
+function startSessionWith(clientId) {
+  const session = sessionForNow(clientId);
+  render();
+  liveOpen(session.id);
+}
+
+function openStartDialog() {
+  const dlg = $('#startDialog');
+  if (!dlg) return;
+
+  if (!state.clients.length) {
+    openClientForm(null);
+    return;
+  }
+
+  $('#startSearch').value = '';
+  renderStartList('');
+  dlg.showModal();
+  setTimeout(() => $('#startSearch').focus(), 60);
+}
+
+function renderStartList(query) {
+  const box = $('#startList');
+  if (!box) return;
+
+  const q = String(query || '').trim().toLowerCase();
+  const list = state.clients
+    .filter(c => !q || c.name.toLowerCase().includes(q))
+    .sort((a, b) => a.name.localeCompare(b.name, 'ru'));
+
+  box.innerHTML = list.length
+    ? list.map(c => {
+        const todaySession = state.sessions.find(s => s.clientId === c.id && s.date === today());
+        const st = STATUS[c.status] || { label: '—', className: 'st-done' };
+        return `
+          <button class="start-item" data-start-client="${c.id}" type="button">
+            <span class="avatar">${esc(initials(c.name))}</span>
+            <span class="start-body">
+              <span class="start-name">${esc(c.name)}</span>
+              <span class="start-meta">${todaySession ? 'встреча сегодня' : 'сегодня встречи нет'}</span>
+            </span>
+            <span class="pill ${st.className}">${esc(st.label)}</span>
+          </button>`;
+      }).join('')
+    : '<div class="empty" style="padding:14px">Никого не нашлось</div>';
 }
 
 /* ---------- режим «босс»: скрыть имена и суммы ---------- */
@@ -1152,10 +1263,8 @@ function openClientCard(id) {
     </div>
 
     <div class="card-actions">
-      ${todaySession
-        ? `<button class="btn btn-primary" data-action="start-live" data-session-id="${todaySession.id}" type="button">Начать сессию</button>`
-        : ''}
-      <button class="btn ${todaySession ? 'btn-soft' : 'btn-primary'}" data-action="add-session" data-client-id="${c.id}" type="button">+ Сессия</button>
+      <button class="btn btn-primary" data-action="start-live" data-client-id="${c.id}" type="button">Начать сессию</button>
+      <button class="btn btn-soft" data-action="add-session" data-client-id="${c.id}" type="button">+ Сессия</button>
       <button class="btn btn-soft" data-action="edit-client" data-client-id="${c.id}" type="button">Редактировать</button>
       <button class="btn btn-danger" data-action="delete-client" data-client-id="${c.id}" type="button">Удалить</button>
       <button class="btn btn-ghost" data-close-card type="button" style="margin-left:auto">Закрыть</button>
@@ -1223,7 +1332,7 @@ document.addEventListener('click', e => {
 
   if (target.dataset.action === 'start-live') {
     cardDialog.close();
-    liveOpen(target.dataset.sessionId);
+    startSessionWith(target.dataset.clientId);
     return;
   }
 
@@ -1530,20 +1639,68 @@ $('#liveMissed').addEventListener('click', () => {
 $('#liveDeck').addEventListener('click', () => {
   const box = $('#liveDeckBox');
   box.hidden = !box.hidden;
-  if (!box.hidden) { deckRenderCats(); $('#deckQ').textContent = 'Нажмите «Вытянуть»'; }
+  if (!box.hidden) deckRenderAll();
 });
 
-$('#deckClose').addEventListener('click', () => { $('#liveDeckBox').hidden = true; });
+/* таймер внутри режима сессии */
+$('#liveTimerToggle').addEventListener('click', () => {
+  if (timerRunning) { timerStop(); $('#liveTimerToggle').textContent = 'Продолжить'; }
+  else { timerStart(); $('#liveTimerToggle').textContent = 'Пауза'; }
+});
 
-$('#deckDraw').addEventListener('click', () => { $('#deckQ').textContent = deckDrawOne(); });
+$('#liveTimerReset').addEventListener('click', () => {
+  timerReset(TIMER_MINUTES);
+  timerStart();
+  $('#liveTimerToggle').textContent = 'Пауза';
+  livePaint();
+});
 
+/* колода: категории, добавление и удаление */
 document.addEventListener('click', e => {
   const cat = e.target.closest('[data-deck-cat]');
-  if (!cat) return;
-  deckCat = cat.dataset.deckCat;
-  deckLast = '';
-  deckRenderCats();
-  $('#deckQ').textContent = 'Нажмите «Вытянуть»';
+  if (cat) {
+    deckCat = cat.dataset.deckCat;
+    deckRenderAll();
+    return;
+  }
+
+  const del = e.target.closest('[data-deck-del]');
+  if (del) {
+    deckDelete(Number(del.dataset.deckDel));
+    return;
+  }
+});
+
+$('#deckAddForm').addEventListener('submit', e => {
+  e.preventDefault();
+  const input = $('#deckNewQ');
+  if (deckAddQuestion(input.value)) input.value = '';
+});
+
+$('#deckCatForm').addEventListener('submit', e => {
+  e.preventDefault();
+  const input = $('#deckNewCat');
+  if (deckAddCategory(input.value)) input.value = '';
+});
+
+/* старт сессии */
+$('#startSessionBtn').addEventListener('click', openStartDialog);
+
+$('#startSearch').addEventListener('input', e => renderStartList(e.target.value));
+
+$('#startNewClient').addEventListener('click', () => {
+  $('#startDialog').close();
+  openClientForm(null);
+});
+
+document.addEventListener('click', e => {
+  if (e.target.closest('[data-close-start]')) $('#startDialog').close();
+
+  const pick = e.target.closest('[data-start-client]');
+  if (pick) {
+    $('#startDialog').close();
+    startSessionWith(pick.dataset.startClient);
+  }
 });
 
 /* ---------- режим «босс» ---------- */

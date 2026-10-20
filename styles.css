@@ -454,13 +454,57 @@ body.is-live { overflow: hidden; }
 }
 .live-deck[hidden] { display: none; }
 .deck-cats { display: flex; flex-wrap: wrap; gap: 5px; }
-.deck-card { display: flex; flex-direction: column; gap: 10px; }
-.deck-q {
-  margin: 0; font-size: 16px; line-height: 1.5; color: #443d54;
-  min-height: 48px; display: flex; align-items: center;
+.deck-list { display: flex; flex-direction: column; gap: 4px; max-height: 230px; overflow-y: auto; }
+.deck-item {
+  display: flex; align-items: flex-start; gap: 8px;
+  padding: 8px 10px; border-radius: 9px; background: #fff;
+  border: 1px solid #e8e3f0;
 }
-.deck-tools { display: flex; gap: 6px; }
-.deck-tools .btn { padding: 7px 14px; font-size: 13px; }
+.deck-text { flex: 1; font-size: 14px; line-height: 1.45; color: #443d54; }
+.deck-del {
+  flex: none; width: 22px; height: 22px; border-radius: 6px; border: 0;
+  background: transparent; color: #b4a9c7; font-size: 17px; line-height: 1;
+  display: flex; align-items: center; justify-content: center;
+}
+.deck-del:hover { background: #f0ebf7; color: #8a5a5a; }
+.deck-add { display: flex; gap: 6px; }
+.deck-add input {
+  flex: 1; padding: 8px 11px; border-radius: 9px; border: 1px solid #e2dced;
+  background: #fff; font-family: inherit; font-size: 13.5px;
+}
+.deck-add input:focus { outline: none; border-color: #b9a9d6; }
+.deck-add .btn { padding: 7px 13px; font-size: 13px; flex: none; }
+
+/* ---------- центрирование таймера в сессии ---------- */
+.live-center {
+  display: flex; flex-direction: column; align-items: center; gap: 10px;
+  padding: 6px 0 2px;
+}
+.live-center .live-clock { margin-left: 0; font-size: 64px; }
+.live-clock-tools { display: flex; gap: 6px; }
+.live-clock-tools .live-btn { padding: 6px 13px; font-size: 12.5px; }
+
+/* ---------- выбор клиента для старта ---------- */
+.view-head-row { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
+.btn-lg { height: 46px; padding: 0 20px; font-size: 14.5px; }
+
+.start-search {
+  width: 100%; height: 42px; padding: 0 13px; border-radius: 10px;
+  border: 1px solid var(--line); background: #faf9f6; font-family: inherit; font-size: 14px;
+}
+.start-search:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
+
+.start-list { display: flex; flex-direction: column; gap: 5px; max-height: 46vh; overflow-y: auto; }
+.start-item {
+  display: flex; align-items: center; gap: 11px;
+  padding: 10px 12px; border-radius: 12px; border: 1px solid var(--line);
+  background: var(--panel); text-align: left; font-family: inherit; width: 100%;
+  transition: border-color .15s, background .15s;
+}
+.start-item:hover { border-color: #d8d2c6; background: #faf9f6; }
+.start-body { display: flex; flex-direction: column; gap: 1px; min-width: 0; flex: 1; }
+.start-name { font-size: 14.5px; font-weight: 600; }
+.start-meta { font-size: 12.5px; color: var(--muted); }
 .field-plan textarea { background: #fbfaf6; }
 
 /* ---------- таймер ---------- */
@@ -675,7 +719,7 @@ body.is-boss .week-time {
   /* режим сессии на телефоне */
   .live-top { padding: 10px 14px; gap: 10px; flex-wrap: wrap; }
   .live-who strong { font-size: 15px; }
-  .live-clock { font-size: 24px; }
+  .live-center .live-clock { font-size: 52px; }
   .live-btn { padding: 7px 11px; font-size: 12.5px; }
   .live-body { padding: 14px 14px 6px; gap: 11px; }
   .live-field:first-of-type textarea { min-height: 140px; }
@@ -686,7 +730,11 @@ body.is-boss .week-time {
   .live-foot-actions { margin-left: 0; width: 100%; }
   .live-foot-actions .btn { flex: 1; }
   .live-saved { order: -1; }
-  .deck-q { font-size: 15px; min-height: 44px; }
+  .deck-list { max-height: 180px; }
+
+  .view-head-row { flex-direction: column; align-items: stretch; }
+  #startSessionBtn { width: 100%; }
+  .start-list { max-height: 52vh; }
 }
 
 @media (max-width: 420px) {
