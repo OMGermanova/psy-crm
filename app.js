@@ -73,7 +73,9 @@ const sessionsOf = id => state.sessions
 function matchesQuery(...parts) {
   const q = state.query.trim().toLowerCase();
   if (!q) return true;
-  return parts.filter(Boolean).join(' ').toLowerCase().includes(q);
+  const hay = parts.filter(Boolean).join(' ').toLowerCase();
+  // каждое слово запроса должно встретиться хотя бы где-то
+  return q.split(/\s+/).every(word => hay.includes(word));
 }
 
 /* ---------- хранилище ---------- */
@@ -479,9 +481,14 @@ function renderWeek() {
   /* --- полный календарь --- */
   const calTitle = $('#calTitle');
   if (calTitle) {
-    const label = start.toLocaleDateString('ru-RU', { day: 'numeric', month: 'long' })
-      + ' — ' + parseDate(end).toLocaleDateString('ru-RU', { day: 'numeric', month: 'long' });
-    calTitle.textContent = weekOffset === 0 ? 'Эта неделя' : 'Неделя ' + label;
+    const d1 = start;
+    const d2 = parseDate(end);
+    const sameMonth = d1.getMonth() === d2.getMonth();
+    const label = sameMonth
+      ? `${d1.getDate()}–${d2.toLocaleDateString('ru-RU', { day: 'numeric', month: 'long' })} ${d2.getFullYear()}`
+      : `${d1.toLocaleDateString('ru-RU', { day: 'numeric', month: 'long' })} — `
+        + `${d2.toLocaleDateString('ru-RU', { day: 'numeric', month: 'long' })} ${d2.getFullYear()}`;
+    calTitle.textContent = label;
 
     const sub = $('#calSub');
     if (sub) {
@@ -505,13 +512,18 @@ function renderWeek() {
       const isToday = day === t;
       const isPast = day < t;
       const isBusiest = busiest && busiest.day === day && busiest.count > 0;
+      const isPicked = calDay === day;
 
       return `
-        <div class="week-day${isToday ? ' is-today' : ''}${isPast ? ' is-past' : ''}${isBusiest ? ' is-busiest' : ''}">
-          <div class="week-day-head">
-            <span class="week-dow">${parseDate(day).toLocaleDateString('ru-RU', { weekday: 'short' })}</span>
-            <span class="week-num">${parseDate(day).getDate()}</span>
-            ${isBusiest ? '<span class="week-peak">пик</span>' : ''}
+        <div class="week-day${isToday ? ' is-today' : ''}${isPast ? ' is-past' : ''}${isBusiest ? ' is-busiest' : ''}${isPicked ? ' is-picked' : ''}">
+          <div class="week-day-top">
+            <button class="week-day-head" data-pick-day="${day}" type="button" title="Показать день по часам">
+              <span class="week-dow">${parseDate(day).toLocaleDateString('ru-RU', { weekday: 'short' })}</span>
+              <span class="week-num">${parseDate(day).getDate()}</span>
+              ${isBusiest ? '<span class="week-peak">пик</span>' : ''}
+              <span class="week-count">${list.length || ''}</span>
+            </button>
+            <button class="week-add" data-add-day="${day}" type="button" title="Добавить встречу на этот день"${isPast ? ' hidden' : ''}>+</button>
           </div>
           <div class="week-slots">
             ${list.length
@@ -528,6 +540,8 @@ function renderWeek() {
         </div>`;
     }).join('');
   }
+
+  renderCalDay();
 
   /* --- краткий вид на главной --- */
   const brief = $('#weekBrief');
@@ -555,6 +569,101 @@ function renderWeek() {
       </p>
     `;
   }
+}
+
+/* ---------- выбранный день: разбивка по времени ---------- */
+
+let calDay = null; // выбранная дата (YYYY-MM-DD) или null
+
+function renderCalDay() {
+  const panel = $('#calDayPanel');
+  if (!panel) return;
+
+  if (!calDay) {
+    panel.hidden = true;
+    const cols = panel.closest('.cal-cols');
+    if (cols) cols.classList.remove('has-day');
+    return;
+  }
+  panel.hidden = false;
+  const cols = panel.closest('.cal-cols');
+  if (cols) cols.classList.add('has-day');
+
+  const d = parseDate(calDay);
+  const isPastDay = calDay < today();
+
+  $('#calDayTitle').textContent = d.toLocaleDateString('ru-RU', {
+    weekday: 'long', day: 'numeric', month: 'long', year: 'numeric',
+  });
+
+  const list = state.sessions
+    .filter(s => s.date === calDay)
+    .sort((a, b) => (a.time || '99:99').localeCompare(b.time || '99:99'));
+
+  const withTime = list.filter(s => s.time);
+  const noTime = list.filter(s => !s.time);
+
+  // рабочие часы: 9:00–21:00, но расширяем, если встречи выходят за рамки
+  const HOUR_FROM = 9;
+  const HOUR_TO = 21;
+  const usedHours = withTime.map(s => Number(String(s.time).slice(0, 2))).filter(h => !isNaN(h));
+  const from = Math.min(HOUR_FROM, ...(usedHours.length ? usedHours : [HOUR_FROM]));
+  const to = Math.max(HOUR_TO, ...(usedHours.length ? usedHours : [HOUR_TO]));
+
+  let rows = '';
+
+  for (let h = from; h <= to; h++) {
+    const hh = pad(h) + ':00';
+    const inHour = withTime.filter(s => Number(String(s.time).slice(0, 2)) === h);
+
+    if (!inHour.length) {
+      // свободный час: в прошлом — просто пометка, в будущем — можно записать
+      rows += isPastDay
+        ? `<div class="cal-slot is-free is-past">
+             <span class="cal-hour">${hh}</span>
+             <span class="cal-free-text">свободно</span>
+           </div>`
+        : `<div class="cal-slot is-free">
+             <span class="cal-hour">${hh}</span>
+             <button class="cal-free-add" data-add-day="${calDay}" data-add-time="${hh}" type="button">свободно — добавить</button>
+           </div>`;
+      continue;
+    }
+
+    inHour.forEach(s => {
+      const c = clientById(s.clientId) || {};
+      rows += `
+        <div class="cal-slot is-busy">
+          <span class="cal-hour">${esc(s.time)}</span>
+          <button class="cal-event" data-open-session="${s.id}" type="button">
+            <strong>${esc(c.name || 'Клиент удалён')}</strong>
+            <span>${esc(s.topic || 'без темы')}</span>
+          </button>
+        </div>`;
+    });
+  }
+
+  if (noTime.length) {
+    rows += `
+      <div class="cal-slot is-untimed">
+        <span class="cal-hour">—</span>
+        <div class="cal-untimed">
+          ${noTime.map(s => {
+            const c = clientById(s.clientId) || {};
+            return `<button class="cal-event" data-open-session="${s.id}" type="button">
+              <strong>${esc(c.name || 'Клиент удалён')}</strong>
+              <span>время не задано</span>
+            </button>`;
+          }).join('')}
+        </div>
+      </div>`;
+  }
+
+  if (isPastDay) {
+    rows += `<p class="cal-past-note">День уже прошёл — записать встречу нельзя.</p>`;
+  }
+
+  $('#calSlots').innerHTML = rows;
 }
 
 /* ---------- «мостик»: о чём договорились в прошлый раз ---------- */
@@ -598,8 +707,12 @@ function timerPaint() {
   $('#timerBar').style.width = done + '%';
 
   const face = $('#timerFace');
+  face.classList.toggle('is-running', timerRunning);
   face.classList.toggle('is-warning', timerLeft <= 600 && timerLeft > 0);
   face.classList.toggle('is-over', timerLeft <= 0);
+
+  const btn = $('#timerBtn');
+  if (btn) btn.classList.toggle('is-running', timerRunning);
 
   if (typeof livePaint === 'function') livePaint();
 }
@@ -635,6 +748,8 @@ function timerStop() {
   clearInterval(timerId);
   timerId = null;
   $('#timerToggle').textContent = 'Продолжить';
+  timerPaint();
+  if (typeof livePaint === 'function') livePaint();
 }
 
 function timerReset(minutes = TIMER_MINUTES) {
@@ -932,6 +1047,7 @@ function livePaint() {
   const clock = $('#liveClock');
   if (!clock) return;
   clock.textContent = `${pad(m)}:${pad(s)}`;
+  clock.classList.toggle('is-running', timerRunning);
   clock.classList.toggle('is-warning', timerLeft <= 600 && timerLeft > 0);
   clock.classList.toggle('is-over', timerLeft <= 0);
 }
@@ -1137,8 +1253,11 @@ function renderToday() {
     </button>
   `;
 
-  const upcoming = [...state.sessions]
-    .filter(s => ['past', 'missed', 'done'].indexOf(sessionState(s)) === -1)
+  const q = state.query.trim();
+  // при поиске смотрим по всем встречам, включая прошедшие
+  const pool = state.sessions.filter(s => ['past', 'missed', 'done'].indexOf(sessionState(s)) === -1);
+
+  const upcoming = [...pool]
     .sort((a, b) => (a.date + (a.time || '')).localeCompare(b.date + (b.time || '')))
     .slice(0, 6);
 
@@ -1200,12 +1319,13 @@ function renderClients() {
 }
 
 function renderSessions() {
-  const q = state.query.trim();
   let list = [...state.sessions].sort((a, b) => (b.date + (b.time || '')).localeCompare(a.date + (a.time || '')));
-  if (q) list = list.filter(s => {
-    const c = clientById(s.clientId) || {};
-    return matchesQuery(c.name, s.topic, s.note);
-  });
+  // поиск работает только по клиентам: если он активен — показываем только их встречи
+  const q = state.query.trim();
+  if (q) {
+    const found = state.clients.filter(c => matchesQuery(c.name, c.phone, c.email, c.note)).map(c => c.id);
+    list = list.filter(s => found.indexOf(s.clientId) >= 0);
+  }
 
   $('#sessionsSub').textContent = `${list.length} ${plural(list.length, 'сессия', 'сессии', 'сессий')}`
     + (q ? ` по запросу «${q}»` : ' — все, новые сверху');
@@ -1223,10 +1343,12 @@ function renderSessions() {
     const c = clientById(s.clientId) || {};
     return `
       <div class="session-line">
-        <span class="s-date"><strong>${humanDateShort(s.date)}</strong><span>${weekday(s.date)}${s.time ? ', ' + esc(s.time) : ''}</span></span>
-        <span class="s-client">${esc(c.name || 'клиент удалён')}</span>
-        <span class="s-topic">${esc(s.topic || '—')}</span>
-        <span class="s-amount">${s.amount ? money(s.amount) : '—'}</span>
+        <button class="s-hit" data-open-session="${s.id}" type="button" title="Открыть сессию">
+          <span class="s-date"><strong>${humanDateShort(s.date)}</strong><span>${weekday(s.date)}${s.time ? ', ' + esc(s.time) : ''}</span></span>
+          <span class="s-client">${esc(c.name || 'клиент удалён')}</span>
+          <span class="s-topic">${esc(s.topic || '—')}</span>
+          <span class="s-amount">${s.amount ? money(s.amount) : '—'}</span>
+        </button>
         <button class="pill ${s.paid ? 'pill-paid' : 'pill-unpaid'}" data-toggle-paid="${s.id}" type="button"
           title="Нажми, чтобы отметить оплату">${s.paid ? 'Оплачено' : 'Не оплачено'}</button>
         <button class="icon-btn" data-del-session="${s.id}" type="button" title="Удалить сессию">×</button>
@@ -1260,7 +1382,7 @@ function openClientForm(client) {
   setTimeout(() => $('#clientName').focus(), 40);
 }
 
-function openSessionForm(session, presetClientId) {
+function openSessionForm(session, presetClientId, presetDate, presetTime) {
   if (!state.clients.length) { openClientForm(null); return; }
 
   const selected = session ? session.clientId : (presetClientId || state.clients[0].id);
@@ -1268,15 +1390,56 @@ function openSessionForm(session, presetClientId) {
   $('#sessionId').value = session ? session.id : '';
   $('#sessionClient').innerHTML = state.clients.map(c =>
     `<option value="${c.id}"${c.id === selected ? ' selected' : ''}>${esc(c.name)}</option>`).join('');
-  $('#sessionDate').value = session ? session.date : today();
-  $('#sessionTime').value = session ? session.time || '' : '';
+  $('#sessionDate').value = session ? session.date : (presetDate || today());
+  $('#sessionTime').value = session ? session.time || '' : (presetTime || '');
   $('#sessionTopic').value = session ? session.topic || '' : '';
   $('#sessionNote').value = session ? session.note || '' : '';
   $('#sessionPlan').value = session ? session.plan || '' : '';
   $('#sessionAmount').value = session ? (session.amount ?? '') : ((clientById(selected) || {}).price || '');
   $('#sessionPaid').checked = session ? !!session.paid : false;
 
+  renderSessionClientInfo(selected);
   sessionDialog.showModal();
+}
+
+/* краткая карточка клиента прямо в форме сессии */
+function renderSessionClientInfo(clientId) {
+  const box = $('#sessionClientInfo');
+  if (!box) return;
+
+  const c = clientById(clientId);
+  if (!c) { box.hidden = true; return; }
+  box.hidden = false;
+
+  const sessions = sessionsOf(clientId);
+  const past = sessions.filter(s => s.date <= today());
+  const debt = sessions.filter(s => !s.paid && s.date <= today())
+    .reduce((sum, s) => sum + (Number(s.amount) || 0), 0);
+  const last = [...sessions].filter(s => s.date < today()).pop();
+  const st = STATUS[c.status] || { label: '—', className: 'st-done' };
+  const hints = hintsFor(clientId);
+
+  const facts = [
+    c.phone ? esc(c.phone) : '',
+    c.price ? money(c.price) : '',
+    `${past.length} ${plural(past.length, 'сессия', 'сессии', 'сессий')}`,
+  ].filter(Boolean).join(' · ');
+
+  box.innerHTML = `
+    <div class="sci-top">
+      <span class="avatar avatar-sm">${esc(initials(c.name))}</span>
+      <div class="sci-main">
+        <strong>${esc(c.name)}</strong>
+        <span class="pill ${st.className}">${esc(st.label)}</span>
+      </div>
+      <span class="sci-facts">${facts}</span>
+    </div>
+    ${last ? `<div class="sci-line">Прошлая встреча: ${esc(humanDateShort(last.date))}${last.topic ? ' — ' + esc(last.topic) : ''}</div>` : ''}
+    ${(last && (last.plan || '').trim()) ? `<div class="sci-line sci-plan">План с прошлого раза: ${esc(last.plan)}</div>` : ''}
+    ${debt ? `<div class="sci-line sci-debt">Ждёт оплаты: ${money(debt)}</div>` : ''}
+    ${hints.length ? `<div class="sci-line sci-hint">${esc(hints[0].text)}</div>` : ''}
+    ${c.note ? `<div class="sci-line sci-note">${esc(c.note)}</div>` : ''}
+  `;
 }
 
 function openClientCard(id) {
@@ -1349,8 +1512,16 @@ $('#brandHome').addEventListener('click', () => setView('today'));
 $('#newClient').addEventListener('click', () => openClientForm(null));
 $('#quickSession').addEventListener('click', () => openSessionForm(null));
 
+$('#sessionClient').addEventListener('change', e => {
+  renderSessionClientInfo(e.target.value);
+  const c = clientById(e.target.value);
+  if (c && !$('#sessionId').value) $('#sessionAmount').value = Number(c.price) || '';
+});
+
 $('#search').addEventListener('input', e => {
   state.query = e.target.value;
+  // поиск по клиентам — сразу переключаемся на раздел «Клиенты», иначе результат не виден
+  if (state.query.trim() && state.view !== 'clients') setView('clients');
   render();
 });
 
@@ -1479,6 +1650,41 @@ $('#clientForm').addEventListener('submit', e => {
   render();
 });
 
+/* «Начать встречу» из формы сессии: сохраняем введённое и входим в режим сессии */
+$('#sessionStartLive').addEventListener('click', () => {
+  const clientId = $('#sessionClient').value;
+  if (!clientId) return;
+
+  const id = $('#sessionId').value;
+  const client = clientById(clientId);
+  const data = {
+    clientId,
+    date: $('#sessionDate').value || today(),
+    time: $('#sessionTime').value,
+    topic: $('#sessionTopic').value.trim(),
+    note: $('#sessionNote').value.trim(),
+    plan: $('#sessionPlan').value.trim(),
+    amount: Number($('#sessionAmount').value) || (client ? Number(client.price) || 0 : 0),
+    paid: $('#sessionPaid').checked,
+  };
+
+  let sessionId = id;
+  if (id) {
+    const session = state.sessions.find(s => s.id === id);
+    if (session) Object.assign(session, data);
+  } else {
+    const created = { id: uid(), ...data };
+    state.sessions.push(created);
+    sessionId = created.id;
+  }
+
+  save();
+  sessionDialog.close();
+  if (cardDialog.open) cardDialog.close();
+  render();
+  liveOpen(sessionId);
+});
+
 $('#sessionForm').addEventListener('submit', e => {
   e.preventDefault();
   const id = $('#sessionId').value;
@@ -1597,10 +1803,20 @@ $('#weekPrev').addEventListener('click', () => { weekOffset -= 1; renderWeek(); 
 $('#weekNext').addEventListener('click', () => { weekOffset += 1; renderWeek(); });
 
 const calTodayBtn = $('#calToday');
-if (calTodayBtn) calTodayBtn.addEventListener('click', () => { weekOffset = 0; renderWeek(); });
+if (calTodayBtn) calTodayBtn.addEventListener('click', () => {
+  weekOffset = 0;
+  calDay = today();
+  renderWeek();
+});
 
 const openCalBtn = $('#openCalendar');
 if (openCalBtn) openCalBtn.addEventListener('click', () => setView('calendar'));
+
+const calAddBtn = $('#calAdd');
+if (calAddBtn) calAddBtn.addEventListener('click', () => openSessionForm(null, null, calDay || today()));
+
+const calDayCloseBtn = $('#calDayClose');
+if (calDayCloseBtn) calDayCloseBtn.addEventListener('click', () => { calDay = null; renderWeek(); });
 
 const moreBtn = $('#upcomingMore');
 if (moreBtn) moreBtn.addEventListener('click', () => setView('sessions'));
@@ -1609,8 +1825,29 @@ document.addEventListener('click', e => {
   const dayBtn = e.target.closest('[data-open-day]');
   if (!dayBtn) return;
   weekOffset = 0;
+  calDay = dayBtn.dataset.openDay;
   setView('calendar');
   renderWeek();
+});
+
+document.addEventListener('click', e => {
+  // клик по любому месту дня (кроме встреч и плюсика) раскрывает день по часам
+  const dayCard = e.target.closest('.week-day');
+  if (!dayCard) return;
+  if (e.target.closest('[data-open-session]') || e.target.closest('[data-add-day]')) return;
+  const head = dayCard.querySelector('[data-pick-day]');
+  if (!head) return;
+  const day = head.dataset.pickDay;
+  calDay = calDay === day ? null : day;
+  renderWeek();
+});
+
+document.addEventListener('click', e => {
+  const addBtn = e.target.closest('[data-add-day]');
+  if (!addBtn) return;
+  const day = addBtn.dataset.addDay;
+  const time = addBtn.dataset.addTime || '';
+  openSessionForm(null, null, day, time);
 });
 
 /* ---------- плитки статистики ---------- */

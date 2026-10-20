@@ -62,8 +62,37 @@
       </nav>
 
       <div class="sidebar-foot">
-        <span class="demo-badge">Демо-версия. Данные ненастоящие и живут только в этом браузере.</span>
-        <button class="link-btn" data-reset-demo type="button">Сбросить демо-данные</button>
+        <details class="menu menu-side" id="dataMenu">
+          <summary class="btn btn-soft" title="Копия данных и история изменений">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><path d="m7 10 5 5 5-5" /><path d="M12 15V3" />
+            </svg>
+            Данные
+          </summary>
+          <div class="menu-panel menu-panel-up">
+            <button class="menu-item" id="exportData" type="button">
+              <strong>Сохранить копию</strong>
+              <span>Скачать файл со всеми клиентами и сессиями</span>
+            </button>
+            <button class="menu-item" id="importData" type="button">
+              <strong>Загрузить копию</strong>
+              <span>Восстановить данные из ранее сохранённого файла</span>
+            </button>
+            <button class="menu-item" id="openHistory" type="button">
+              <strong>История изменений</strong>
+              <span>Вернуть состояние до последних правок</span>
+            </button>
+            <div class="menu-sep"></div>
+            <button class="menu-item" id="exportCsv" type="button">
+              <strong>Таблица для Excel</strong>
+              <span>Два файла .csv — клиенты и сессии</span>
+            </button>
+            <button class="menu-item" id="exportPrint" type="button">
+              <strong>Версия для печати</strong>
+              <span>Сводка в новом окне — можно сохранить в PDF</span>
+            </button>
+          </div>
+        </details>
       </div>
     </aside>
 
@@ -73,7 +102,7 @@
           <svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
             <circle cx="11" cy="11" r="7" /><path d="m20 20-3.6-3.6" />
           </svg>
-          <input type="search" id="search" placeholder="Найти клиента, сессию или заметку" autocomplete="off" />
+          <input type="search" id="search" placeholder="Найти клиента по имени, телефону или почте" autocomplete="off" />
         </label>
         <button class="btn btn-primary" id="newClient" type="button">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
@@ -144,8 +173,19 @@
             <button class="icon-btn" id="weekPrev" type="button" title="Предыдущая неделя">‹</button>
             <button class="btn btn-ghost btn-sm" id="calToday" type="button">Сегодня</button>
             <button class="icon-btn" id="weekNext" type="button" title="Следующая неделя">›</button>
+            <button class="btn btn-soft btn-sm cal-add" id="calAdd" type="button">+ Встреча</button>
           </div>
-          <div class="week-list" id="weekList"></div>
+          <div class="cal-cols">
+            <div class="week-list" id="weekList"></div>
+
+            <div class="panel cal-day" id="calDayPanel">
+              <div class="panel-head">
+                <h2 id="calDayTitle">День</h2>
+                <button class="icon-btn" id="calDayClose" type="button" title="Свернуть">×</button>
+              </div>
+              <div class="cal-slots" id="calSlots"></div>
+            </div>
+          </div>
         </section>
 
         <section class="view" id="view-clients">
@@ -169,37 +209,6 @@
       </div>
 
       <div class="app-foot">
-        <details class="menu menu-foot" id="dataMenu">
-          <summary class="btn btn-soft" title="Копия данных и история изменений">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">
-              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><path d="m7 10 5 5 5-5" /><path d="M12 15V3" />
-            </svg>
-            Данные
-          </summary>
-          <div class="menu-panel menu-panel-up">
-            <button class="menu-item" id="exportData" type="button">
-              <strong>Сохранить копию</strong>
-              <span>Скачать файл со всеми клиентами и сессиями</span>
-            </button>
-            <button class="menu-item" id="importData" type="button">
-              <strong>Загрузить копию</strong>
-              <span>Восстановить данные из ранее сохранённого файла</span>
-            </button>
-            <button class="menu-item" id="openHistory" type="button">
-              <strong>История изменений</strong>
-              <span>Вернуть состояние до последних правок</span>
-            </button>
-            <div class="menu-sep"></div>
-            <button class="menu-item" id="exportCsv" type="button">
-              <strong>Таблица для Excel</strong>
-              <span>Два файла .csv — клиенты и сессии</span>
-            </button>
-            <button class="menu-item" id="exportPrint" type="button">
-              <strong>Версия для печати</strong>
-              <span>Сводка в новом окне — можно сохранить в PDF</span>
-            </button>
-          </div>
-        </details>
         <span class="demo-badge">Демо-версия. Данные ненастоящие и живут только в этом браузере.</span>
         <button class="link-btn" data-reset-demo type="button">Сбросить демо-данные</button>
       </div>
@@ -257,6 +266,8 @@
       <h2 id="sessionFormTitle">Новая сессия</h2>
       <input type="hidden" id="sessionId" />
 
+      <div class="session-client-info" id="sessionClientInfo"></div>
+
       <label class="field">
         <span>Клиент *</span>
         <select id="sessionClient" required></select>
@@ -300,6 +311,7 @@
       </label>
 
       <div class="dialog-actions">
+        <button class="btn btn-live" id="sessionStartLive" type="button">Начать встречу</button>
         <button class="btn btn-ghost" type="button" data-close>Отмена</button>
         <button class="btn btn-primary" type="submit">Сохранить</button>
       </div>
