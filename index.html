@@ -74,6 +74,29 @@
           </svg>
           Новый клиент
         </button>
+
+        <details class="menu" id="dataMenu">
+          <summary class="btn btn-soft" title="Копия данных и история изменений">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><path d="m7 10 5 5 5-5" /><path d="M12 15V3" />
+            </svg>
+            Данные
+          </summary>
+          <div class="menu-panel">
+            <button class="menu-item" id="exportData" type="button">
+              <strong>Сохранить копию</strong>
+              <span>Скачать файл со всеми клиентами и сессиями</span>
+            </button>
+            <button class="menu-item" id="importData" type="button">
+              <strong>Загрузить копию</strong>
+              <span>Восстановить данные из ранее сохранённого файла</span>
+            </button>
+            <button class="menu-item" id="openHistory" type="button">
+              <strong>История изменений</strong>
+              <span>Вернуть состояние до последних правок</span>
+            </button>
+          </div>
+        </details>
       </header>
 
       <div class="views">
@@ -221,6 +244,19 @@
     <div class="dialog-form" id="cardBody"></div>
   </dialog>
 
+  <!-- История изменений -->
+  <dialog class="dialog" id="historyDialog">
+    <div class="dialog-form">
+      <h2>История изменений</h2>
+      <p class="view-sub" style="margin:-6px 0 2px">Последние 10 состояний базы. Можно вернуть любое.</p>
+      <div class="history" id="historyList"></div>
+      <div class="dialog-actions">
+        <button class="btn btn-ghost" type="button" data-close-history>Закрыть</button>
+      </div>
+    </div>
+  </dialog>
+
+  <input type="file" id="importFile" accept="application/json,.json" hidden />
   <script src="app.js"></script>
 </body>
 </html>

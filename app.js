@@ -96,9 +96,81 @@ function load() {
 function save() {
   try {
     localStorage.setItem(STORE_KEY, JSON.stringify({ clients: state.clients, sessions: state.sessions }));
+    rememberSnapshot();
   } catch (e) {
     console.warn('Браузер не даёт сохранить данные:', e);
   }
+}
+
+/* ---------- снимки состояния (страховка от случайного удаления) ---------- */
+
+const SNAP_KEY = 'psy-crm-snapshots';
+const SNAP_LIMIT = 10;
+const SNAP_MIN_GAP = 120000; // не чаще одного снимка в 2 минуты
+
+let lastSnapAt = 0;
+let lastSnapHash = '';
+
+function dataHash() {
+  return JSON.stringify({ clients: state.clients, sessions: state.sessions });
+}
+
+function readSnapshots() {
+  try {
+    const raw = localStorage.getItem(SNAP_KEY);
+    const arr = raw ? JSON.parse(raw) : [];
+    return Array.isArray(arr) ? arr : [];
+  } catch (e) {
+    return [];
+  }
+}
+
+function writeSnapshots(list) {
+  try {
+    localStorage.setItem(SNAP_KEY, JSON.stringify(list.slice(0, SNAP_LIMIT)));
+  } catch (e) {
+    console.warn('Не удалось сохранить снимок:', e);
+  }
+}
+
+function rememberSnapshot(force = false) {
+  const hash = dataHash();
+  const now = Date.now();
+  if (hash === lastSnapHash) return;
+  if (!force && now - lastSnapAt < SNAP_MIN_GAP) return;
+
+  const list = readSnapshots();
+  list.unshift({
+    at: now,
+    clients: state.clients.length,
+    sessions: state.sessions.length,
+    data: JSON.parse(hash),
+  });
+  writeSnapshots(list);
+  lastSnapHash = hash;
+  lastSnapAt = now;
+}
+
+function restoreSnapshot(index) {
+  const list = readSnapshots();
+  const snap = list[index];
+  if (!snap) return false;
+  state.clients = snap.data.clients || [];
+  state.sessions = snap.data.sessions || [];
+  save();
+  render();
+  return true;
+}
+
+function snapshotTime(ts) {
+  const d = new Date(ts);
+  const t = today();
+  const day = iso(d);
+  const time = `${pad(d.getHours())}:${pad(d.getMinutes())}`;
+  if (day === t) return `сегодня, ${time}`;
+  const diff = Math.round((parseDate(day) - parseDate(t)) / 86400000);
+  if (diff === -1) return `вчера, ${time}`;
+  return d.toLocaleDateString('ru-RU', { day: 'numeric', month: 'long' }) + ', ' + time;
 }
 
 function seed() {
@@ -123,6 +195,88 @@ function seed() {
     { id: 's7', clientId: 'c4', date: day(-12), time: '19:00', topic: 'Пауза в работе',           note: 'Возвращение через месяц.',            amount: 4000, paid: false },
     { id: 's8', clientId: 'c3', date: day(-6),  time: '12:30', topic: 'Первичная встреча',        note: 'Запрос: «не могу себя хвалить».',     amount: 3500, paid: true },
   ];
+}
+
+/* ---------- копия данных: экспорт и импорт ---------- */
+
+function exportData() {
+  const payload = {
+    app: 'Кабинет',
+    version: 1,
+    exportedAt: new Date().toISOString(),
+    clients: state.clients,
+    sessions: state.sessions,
+  };
+  const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `kabinet-kopiya-${today()}.json`;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 2000);
+  toast('Копия сохранена в загрузки');
+}
+
+function importData(file) {
+  const reader = new FileReader();
+  reader.onload = () => {
+    try {
+      const data = JSON.parse(String(reader.result));
+      const clients = Array.isArray(data.clients) ? data.clients : null;
+      const sessions = Array.isArray(data.sessions) ? data.sessions : null;
+      if (!clients || !sessions) throw new Error('в файле нет клиентов и сессий');
+
+      if (!confirm(`Заменить текущие данные копией?\n\nВ копии: клиентов — ${clients.length}, сессий — ${sessions.length}.\nТекущие данные можно будет вернуть через «Историю».`)) return;
+
+      rememberSnapshot(true);
+      state.clients = clients;
+      state.sessions = sessions;
+      save();
+      render();
+      toast('Данные загружены из копии');
+    } catch (e) {
+      alert('Не получилось прочитать файл. Похоже, это не копия данных «Кабинета».\n\n' + e.message);
+    }
+  };
+  reader.onerror = () => alert('Не удалось открыть файл.');
+  reader.readAsText(file);
+}
+
+/* ---------- история изменений ---------- */
+
+function renderHistory() {
+  const list = readSnapshots();
+  const box = $('#historyList');
+  if (!box) return;
+
+  box.innerHTML = list.length
+    ? list.map((s, i) => `
+        <div class="history-row">
+          <span class="history-when">${esc(snapshotTime(s.at))}</span>
+          <span class="history-count">${s.clients} ${plural(s.clients, 'клиент', 'клиента', 'клиентов')} · ${s.sessions} ${plural(s.sessions, 'сессия', 'сессии', 'сессий')}</span>
+          <button class="btn btn-soft btn-sm" data-restore="${i}" type="button">Вернуть</button>
+        </div>`).join('')
+    : `<div class="empty">Пока нет снимков. Они появятся, как только ты что-нибудь изменишь.</div>`;
+}
+
+/* ---------- уведомление ---------- */
+
+let toastTimer = null;
+
+function toast(text) {
+  let el = $('#toast');
+  if (!el) {
+    el = document.createElement('div');
+    el.id = 'toast';
+    el.className = 'toast';
+    document.body.appendChild(el);
+  }
+  el.textContent = text;
+  el.classList.add('is-visible');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => el.classList.remove('is-visible'), 2600);
 }
 
 /* ---------- отрисовка ---------- */
@@ -555,8 +709,57 @@ function tickClock() {
 tickClock();
 setInterval(tickClock, 1000);
 
+/* ---------- данные: копия и история ---------- */
+
+const historyDialog = $('#historyDialog');
+
+$('#exportData').addEventListener('click', () => {
+  $('#dataMenu').removeAttribute('open');
+  exportData();
+});
+
+$('#importData').addEventListener('click', () => {
+  $('#dataMenu').removeAttribute('open');
+  $('#importFile').click();
+});
+
+$('#importFile').addEventListener('change', e => {
+  const file = e.target.files && e.target.files[0];
+  if (file) importData(file);
+  e.target.value = '';
+});
+
+$('#openHistory').addEventListener('click', () => {
+  $('#dataMenu').removeAttribute('open');
+  renderHistory();
+  historyDialog.showModal();
+});
+
+historyDialog.addEventListener('click', e => {
+  const btn = e.target.closest('[data-restore]');
+  if (btn) {
+    const i = Number(btn.dataset.restore);
+    const snap = readSnapshots()[i];
+    if (!snap) return;
+    if (!confirm(`Вернуть состояние от ${snapshotTime(snap.at)}?\n\nКлиентов — ${snap.clients}, сессий — ${snap.sessions}.\nТекущие данные сначала сохранятся в историю.`)) return;
+    rememberSnapshot(true);
+    restoreSnapshot(i);
+    historyDialog.close();
+    toast('Состояние восстановлено');
+    return;
+  }
+  if (e.target.closest('[data-close-history]')) historyDialog.close();
+});
+
+/* закрыть меню по клику мимо */
+document.addEventListener('click', e => {
+  const menu = $('#dataMenu');
+  if (menu && menu.hasAttribute('open') && !menu.contains(e.target)) menu.removeAttribute('open');
+});
+
 /* ---------- старт ---------- */
 
 load();
+rememberSnapshot(true);
 setView('today');
 render();
