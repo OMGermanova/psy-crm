@@ -197,6 +197,146 @@ function seed() {
   ];
 }
 
+/* ---------- таблица для Excel ---------- */
+
+function csvCell(value) {
+  const s = String(value ?? '');
+  // защита от «съедания» длинных номеров и от формул в Excel
+  const safe = /^[=+\-@]/.test(s) ? `'${s}` : s;
+  return '"' + safe.replace(/"/g, '""') + '"';
+}
+
+function downloadFile(name, text, mime) {
+  const blob = new Blob(['\uFEFF' + text], { type: mime });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = name;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 2000);
+}
+
+function exportCsv() {
+  const clientRows = [
+    ['Имя', 'Телефон', 'Почта', 'Статус', 'Стоимость', 'Заметка', 'Клиент с'],
+    ...state.clients.map(c => [
+      c.name,
+      c.phone,
+      c.email,
+      (STATUS[c.status] || {}).label || '',
+      c.price || 0,
+      c.note,
+      c.createdAt,
+    ]),
+  ];
+
+  const sessionRows = [
+    ['Дата', 'Время', 'Клиент', 'Тема', 'Сумма', 'Оплачено', 'Заметка'],
+    ...[...state.sessions]
+      .sort((a, b) => (b.date + (b.time || '')).localeCompare(a.date + (a.time || '')))
+      .map(s => {
+        const c = clientById(s.clientId);
+        return [
+          s.date,
+          s.time,
+          c ? c.name : 'клиент удалён',
+          s.topic,
+          s.amount || 0,
+          s.paid ? 'да' : 'нет',
+          s.note,
+        ];
+      }),
+  ];
+
+  const toText = rows => rows.map(r => r.map(csvCell).join(';')).join('\r\n');
+  downloadFile(`kabinet-klienty-${today()}.csv`, toText(clientRows), 'text/csv;charset=utf-8');
+  setTimeout(() => downloadFile(`kabinet-sessii-${today()}.csv`, toText(sessionRows), 'text/csv;charset=utf-8'), 350);
+  toast('Две таблицы сохранены в загрузки');
+}
+
+/* ---------- версия для печати ---------- */
+
+function exportPrint() {
+  const t = today();
+  const month = t.slice(0, 7);
+  const inMonth = state.sessions.filter(s => s.date.slice(0, 7) === month);
+  const paid = inMonth.filter(s => s.paid).reduce((sum, s) => sum + (Number(s.amount) || 0), 0);
+  const debt = inMonth.filter(s => !s.paid).reduce((sum, s) => sum + (Number(s.amount) || 0), 0);
+
+  const rows = state.clients.map(c => {
+    const all = sessionsOf(c.id);
+    const past = all.filter(s => s.date <= t);
+    const unpaid = all.filter(s => !s.paid && s.date <= t).length;
+    const st = STATUS[c.status] || { label: '—' };
+    return `
+      <tr>
+        <td>${esc(c.name)}</td>
+        <td>${esc(st.label)}</td>
+        <td>${esc(c.phone || '—')}</td>
+        <td>${esc(c.email || '—')}</td>
+        <td class="num">${c.price ? money(c.price) : '—'}</td>
+        <td class="num">${past.length}</td>
+        <td class="num">${unpaid || '—'}</td>
+      </tr>`;
+  }).join('');
+
+  const html = `<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8" />
+<title>Кабинет — сводка на ${t}</title>
+<style>
+  * { box-sizing: border-box; }
+  body { font: 13px/1.5 -apple-system, "Segoe UI", Roboto, Arial, sans-serif; color: #2b2925; margin: 32px; }
+  h1 { font-size: 21px; margin: 0 0 4px; letter-spacing: -.02em; }
+  .sub { color: #7a736a; margin: 0 0 22px; }
+  .totals { display: flex; gap: 26px; margin-bottom: 22px; flex-wrap: wrap; }
+  .totals div { font-size: 12px; color: #7a736a; }
+  .totals strong { display: block; font-size: 17px; color: #2b2925; }
+  table { width: 100%; border-collapse: collapse; font-size: 12.5px; }
+  th, td { text-align: left; padding: 7px 9px; border-bottom: 1px solid #e8e4dc; }
+  th { font-size: 11px; text-transform: uppercase; letter-spacing: .04em; color: #7a736a; border-bottom: 1px solid #d8d2c6; }
+  .num { text-align: right; font-variant-numeric: tabular-nums; }
+  tr:last-child td { border-bottom: 0; }
+  .foot { margin-top: 26px; font-size: 11.5px; color: #9a938a; }
+  @media print { body { margin: 0; } .foot { position: fixed; bottom: 0; } }
+</style>
+</head>
+<body>
+  <h1>Кабинет — сводка</h1>
+  <p class="sub">${esc(new Date().toLocaleDateString('ru-RU', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }))}</p>
+
+  <div class="totals">
+    <div>Клиентов<strong>${state.clients.length}</strong></div>
+    <div>Сессий в этом месяце<strong>${inMonth.length}</strong></div>
+    <div>Оплачено за месяц<strong>${money(paid)}</strong></div>
+    <div>Не оплачено<strong>${money(debt)}</strong></div>
+  </div>
+
+  <table>
+    <thead>
+      <tr>
+        <th>Клиент</th><th>Статус</th><th>Телефон</th><th>Почта</th>
+        <th class="num">Стоимость</th><th class="num">Сессий</th><th class="num">Долги</th>
+      </tr>
+    </thead>
+    <tbody>${rows}</tbody>
+  </table>
+
+  <p class="foot">Демонстрационные данные. Сформировано автоматически, ${esc(new Date().toLocaleString('ru-RU'))}.</p>
+</body>
+</html>`;
+
+  const w = window.open('', '_blank');
+  if (!w) { alert('Браузер заблокировал новое окно. Разреши всплывающие окна для этого сайта.'); return; }
+  w.document.open();
+  w.document.write(html);
+  w.document.close();
+  toast('Сводка открыта в новом окне');
+}
+
 /* ---------- копия данных: экспорт и импорт ---------- */
 
 function exportData() {
@@ -733,6 +873,16 @@ $('#openHistory').addEventListener('click', () => {
   $('#dataMenu').removeAttribute('open');
   renderHistory();
   historyDialog.showModal();
+});
+
+$('#exportCsv').addEventListener('click', () => {
+  $('#dataMenu').removeAttribute('open');
+  exportCsv();
+});
+
+$('#exportPrint').addEventListener('click', () => {
+  $('#dataMenu').removeAttribute('open');
+  exportPrint();
 });
 
 historyDialog.addEventListener('click', e => {
