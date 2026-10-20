@@ -177,12 +177,14 @@ function seed() {
   const base = new Date();
   const day = off => iso(new Date(base.getFullYear(), base.getMonth(), base.getDate() + off));
 
+  // Контакты намеренно несуществующие: диапазон 000 в номерах и домен example.com
+  // зарезервированы специально для примеров и не могут принадлежать реальному человеку.
   state.clients = [
-    { id: 'c1', name: 'Анна Петрова',   phone: '+7 921 145-22-08', email: 'anna.p@mail.ru',    status: 'active', price: 4000, note: 'Тревожность, отношения с матерью. Раз в неделю, вторник вечером.', createdAt: day(-120) },
-    { id: 'c2', name: 'Дмитрий Соколов', phone: '+7 916 733-10-45', email: 'd.sokolov@mail.ru', status: 'active', price: 4500, note: 'Выгорание на работе. Раз в неделю, пятница.', createdAt: day(-64) },
-    { id: 'c3', name: 'Марина Ильина',  phone: '+7 903 218-77-31', email: '',                  status: 'new',    price: 3500, note: 'Запрос про самооценку, первичная консультация.', createdAt: day(-6) },
-    { id: 'c4', name: 'Игорь Величко',  phone: '+7 985 402-19-63', email: 'igor.v@yandex.ru',  status: 'paused', price: 4000, note: 'Командировка до конца месяца, вернётся в работу.', createdAt: day(-200) },
-    { id: 'c5', name: 'Ольга Наумова',  phone: '+7 962 330-84-12', email: '',                  status: 'done',   price: 3800, note: 'Работа завершена после 14 сессий.', createdAt: day(-420) },
+    { id: 'c1', name: 'Анна Петрова',   phone: '+7 000 000-00-01', email: 'anna.petrova@example.com', status: 'active', price: 4000, note: 'Тревожность, отношения с матерью. Раз в неделю, вторник вечером.', createdAt: day(-120) },
+    { id: 'c2', name: 'Дмитрий Соколов', phone: '+7 000 000-00-02', email: 'd.sokolov@example.com',    status: 'active', price: 4500, note: 'Выгорание на работе. Раз в неделю, пятница.', createdAt: day(-64) },
+    { id: 'c3', name: 'Марина Ильина',  phone: '+7 000 000-00-03', email: '',                         status: 'new',    price: 3500, note: 'Запрос про самооценку, первичная консультация.', createdAt: day(-6) },
+    { id: 'c4', name: 'Игорь Величко',  phone: '+7 000 000-00-04', email: 'i.velichko@example.com',   status: 'paused', price: 4000, note: 'Командировка до конца месяца, вернётся в работу.', createdAt: day(-200) },
+    { id: 'c5', name: 'Ольга Наумова',  phone: '+7 000 000-00-05', email: '',                         status: 'done',   price: 3800, note: 'Работа завершена после 14 сессий.', createdAt: day(-420) },
   ];
 
   state.sessions = [
@@ -580,6 +582,37 @@ function applyBoss() {
   try { localStorage.setItem('psy-crm-boss', bossMode ? '1' : '0'); } catch (e) { /* нет хранилища */ }
 }
 
+/* ---------- состояние встречи по времени ---------- */
+
+const SESSION_MINUTES = 50;
+
+function sessionState(s) {
+  if (s.date < today()) return 'past';
+  if (s.date > today()) return 'future';
+  if (!s.time) return 'today';
+
+  const [h, m] = String(s.time).split(':').map(Number);
+  if (!Number.isFinite(h) || !Number.isFinite(m)) return 'today';
+
+  const now = new Date();
+  const start = new Date(now.getFullYear(), now.getMonth(), now.getDate(), h, m);
+  const end = new Date(start.getTime() + SESSION_MINUTES * 60000);
+
+  if (now < start) return 'soon';
+  if (now < end) return 'now';
+  return 'past';
+}
+
+function sessionBadge(s) {
+  if (s.paid) return '<span class="pill pill-paid">Оплачено</span>';
+
+  const st = sessionState(s);
+  if (st === 'now') return '<span class="pill pill-now">Сейчас идёт</span>';
+  if (st === 'past') return '<span class="pill pill-unpaid">Не оплачено</span>';
+  if (st === 'soon') return '<span class="pill pill-soon">Скоро</span>';
+  return '<span></span>';
+}
+
 /* ---------- отрисовка ---------- */
 
 function render() {
@@ -657,11 +690,10 @@ function renderToday() {
   $('#upcoming').innerHTML = upcoming.length
     ? upcoming.map(s => {
         const c = clientById(s.clientId) || {};
-        const badge = s.paid
-          ? '<span class="pill pill-paid">Оплачено</span>'
-          : (s.date < t ? '<span class="pill pill-unpaid">Не оплачено</span>' : '<span></span>');
+        const badge = sessionBadge(s);
+        const nowClass = sessionState(s) === 'now' ? ' is-now' : '';
         return `
-          <button class="session-row" data-open-session="${s.id}" type="button">
+          <button class="session-row${nowClass}" data-open-session="${s.id}" type="button">
             <span class="session-date"><strong>${esc(relDay(s.date))}</strong><span>${s.time ? esc(s.time) : 'время не задано'}</span></span>
             <span class="session-main">
               <strong>${esc(c.name || 'Клиент удалён')}</strong>
@@ -849,6 +881,7 @@ function openClientCard(id) {
 /* ---------- события ---------- */
 
 $$('.nav-item').forEach(btn => btn.addEventListener('click', () => setView(btn.dataset.view)));
+$('#brandHome').addEventListener('click', () => setView('today'));
 
 $('#newClient').addEventListener('click', () => openClientForm(null));
 $('#quickSession').addEventListener('click', () => openSessionForm(null));

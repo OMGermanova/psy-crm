@@ -45,7 +45,12 @@ svg { width: 18px; height: 18px; flex: none; }
   height: 100vh;
 }
 
-.brand { display: flex; align-items: center; gap: 11px; padding: 0 8px; }
+.brand {
+  display: flex; align-items: center; gap: 11px; padding: 0 8px;
+  background: transparent; border: 0; border-radius: 12px;
+  text-align: left; width: 100%; transition: background .15s;
+}
+.brand:hover { background: #f6f3ed; }
 .brand-mark {
   width: 38px; height: 38px; border-radius: 12px;
   display: grid; place-items: center;
@@ -213,6 +218,9 @@ svg { width: 18px; height: 18px; flex: none; }
 }
 .pill-paid { background: #e7f1e9; color: #3f6b4d; }
 .pill-unpaid { background: #fbeee7; color: #a8654a; }
+.pill-now { background: #e7f1e9; color: #3f6b4d; box-shadow: 0 0 0 3px rgba(95, 127, 106, .16); }
+.pill-soon { background: #edf1f8; color: #4a5b7a; }
+.session-row.is-now { background: #f2f6f2; box-shadow: inset 0 0 0 1px #d9e5da; }
 .st-new { background: #edf1f8; color: #4a5b7a; }
 .st-active { background: #e7f1e9; color: #3f6b4d; }
 .st-paused { background: #fdf3e3; color: #97703a; }
