@@ -141,6 +141,12 @@ svg { width: 18px; height: 18px; flex: none; }
 @keyframes fade { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: none; } }
 
 .view-head h1 { margin: 0; font-size: 28px; letter-spacing: -.025em; font-weight: 700; }
+.clock {
+  display: inline-block; margin-left: 9px; padding: 1px 9px 2px;
+  background: var(--accent-soft); color: var(--accent);
+  border-radius: 999px; font-size: 13px; font-weight: 600;
+  font-variant-numeric: tabular-nums; letter-spacing: .02em;
+}
 .view-sub { margin: 6px 0 0; font-size: 14px; color: var(--muted); }
 
 /* ---------- stats ---------- */
@@ -243,7 +249,10 @@ svg { width: 18px; height: 18px; flex: none; }
 }
 .client-body { display: flex; flex-direction: column; gap: 5px; min-width: 0; flex: 1; }
 .client-top { display: flex; align-items: center; gap: 8px; justify-content: space-between; }
-.client-top strong { font-size: 15px; letter-spacing: -.01em; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.client-top strong {
+  font-size: 15px; letter-spacing: -.01em; flex: 1; min-width: 0;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
 .client-meta { font-size: 13px; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
 .empty { padding: 34px 18px; text-align: center; color: var(--muted); font-size: 14px; }
@@ -298,24 +307,118 @@ svg { width: 18px; height: 18px; flex: none; }
 .card-session .s-topic { flex: 1; }
 .card-actions { display: flex; gap: 8px; flex-wrap: wrap; }
 
-/* ---------- responsive ---------- */
+/* ---------- подвал с демо-плашкой: нужен только на телефоне ---------- */
+.app-foot { display: none; }
+
+/* ---------- мобильная версия ---------- */
 @media (max-width: 900px) {
   .app { grid-template-columns: 1fr; }
+
+  /* сайдбар превращается в нижнюю навигацию, как в приложении */
   .sidebar {
-    position: static; height: auto; flex-direction: row; align-items: center;
-    gap: 14px; padding: 12px 14px; border-right: 0; border-bottom: 1px solid var(--line);
-    overflow-x: auto;
+    position: fixed; inset: auto 0 0 0; z-index: 20;
+    height: auto; flex-direction: row; align-items: stretch; gap: 0;
+    padding: 8px 10px calc(8px + env(safe-area-inset-bottom));
+    border-right: 0; border-top: 1px solid var(--line);
+    background: rgba(255, 255, 255, .97);
+    backdrop-filter: blur(10px);
+    box-shadow: 0 -8px 24px rgba(43, 41, 37, .08);
   }
-  .brand { padding: 0; }
-  .brand-text span { display: none; }
-  .nav { flex-direction: row; gap: 6px; }
-  .nav-item { width: auto; white-space: nowrap; }
-  .nav-badge { margin-left: 6px; }
-  .sidebar-foot { margin: 0 0 0 auto; }
-  .link-btn { white-space: nowrap; }
-  .main { padding: 20px 16px 50px; }
-  .topbar { flex-wrap: wrap; }
-  .session-line, .sessions-head { grid-template-columns: 78px 1fr auto auto; }
-  .session-line .s-topic, .sessions-head span:nth-child(3) { display: none; }
+  .brand, .sidebar-foot { display: none; }
+
+  .nav { flex: 1; flex-direction: row; gap: 4px; }
+  .nav-item {
+    flex: 1; flex-direction: column; justify-content: center; gap: 3px;
+    min-height: 54px; padding: 6px 4px; text-align: center;
+    font-size: 11.5px; border-radius: 14px;
+  }
+  .nav-item svg { width: 21px; height: 21px; }
+  .nav-badge { display: none; }
+
+  .main { padding: 16px 14px calc(88px + env(safe-area-inset-bottom)); }
+
+  .topbar { flex-direction: column; align-items: stretch; gap: 10px; margin-bottom: 20px; }
+  .search { max-width: none; height: 48px; }
+  .btn { height: 48px; }
+
+  .view-head h1 { font-size: 23px; }
+  .view-sub { font-size: 13px; }
+
+  .stats { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; margin: 16px 0 20px; }
+  .stat { padding: 13px 14px; border-radius: 16px; }
+  .stat-value { font-size: 21px; }
+  .stat-label { font-size: 12px; }
+  .stat-hint { font-size: 11.5px; }
+
+  .panel { padding: 15px 13px 16px; border-radius: 18px; }
+  .panel-head { gap: 10px; margin-bottom: 12px; }
+  .panel h2 { font-size: 16px; }
+
+  .chips { flex-wrap: wrap; overflow-x: visible; gap: 6px; margin-bottom: 14px; }
+  .chip { height: 40px; flex: none; }
+
+  .clients-grid { grid-template-columns: 1fr; gap: 10px; }
+  .client-card { padding: 14px; }
+  .avatar { width: 42px; height: 42px; font-size: 14px; }
+  /* на телефоне имя, контакты и статус переносятся, а не обрезаются краем */
+  .client-top { flex-wrap: wrap; gap: 6px; }
+  .client-top strong { flex: 1 1 100%; white-space: normal; overflow: visible; text-overflow: clip; }
+  .client-meta { white-space: normal; overflow: visible; text-overflow: clip; overflow-wrap: anywhere; }
+  .view-sub { overflow-wrap: anywhere; }
+
+  /* ближайшие встречи: сверху дата и оплата, ниже имя и тема */
+  .session-row {
+    grid-template-columns: 1fr auto;
+    grid-template-areas: "date pill" "main main";
+    gap: 6px 10px; padding: 12px 13px;
+  }
+  .session-row > .session-date { grid-area: date; flex-direction: row; align-items: baseline; gap: 8px; }
+  .session-row > .session-main { grid-area: main; }
+  .session-row > .pill { grid-area: pill; justify-self: end; }
+  .session-row > span:last-child:empty { display: none; }
+
+  /* сессии: вместо сжатой таблицы — карточки */
+  .sessions-head { display: none; }
+  .session-line {
+    grid-template-columns: 1fr auto auto;
+    grid-template-areas:
+      "client pill   del"
+      "date   amount amount"
+      "topic  topic  topic";
+    gap: 5px 10px; padding: 12px 13px; border-radius: 16px;
+  }
+  .session-line > .s-client { grid-area: client; font-size: 15px; }
+  .session-line > .pill { grid-area: pill; justify-self: end; }
+  .session-line > .icon-btn { grid-area: del; width: 40px; height: 40px; }
+  .session-line > .s-date { grid-area: date; flex-direction: row; align-items: baseline; gap: 8px; }
+  .session-line > .s-amount { grid-area: amount; text-align: right; }
+  .session-line > .s-topic { grid-area: topic; white-space: normal; font-size: 13px; }
+
+  /* формы открываются «шторкой» снизу */
+  .dialog {
+    inset: auto 0 0 0; margin: 0; width: 100%; max-width: 100%;
+    border-radius: 22px 22px 0 0; max-height: 92vh; overflow-y: auto;
+  }
+  .dialog-form { padding: 20px 16px calc(20px + env(safe-area-inset-bottom)); gap: 12px; }
+  .dialog-form h2 { font-size: 18px; }
+  .dialog-actions {
+    position: sticky; bottom: 0; background: var(--panel);
+    margin-top: 4px; padding-top: 12px;
+    box-shadow: 0 -12px 18px -14px rgba(43, 41, 37, .3);
+  }
+  .dialog-actions .btn { flex: 1; }
+
   .row, .card-facts { grid-template-columns: 1fr; }
+  .card-sessions { max-height: none; }
+
+  .app-foot {
+    display: flex; flex-direction: column; align-items: center; gap: 6px;
+    margin-top: 26px; text-align: center;
+  }
+}
+
+@media (max-width: 420px) {
+  .stat-value { font-size: 19px; }
+  .stat-hint { font-size: 11px; }
+  .nav-item { font-size: 11px; }
 }
