@@ -325,11 +325,15 @@ function seed() {
     // сегодня
     { id: 's1',  clientId: 'c1',  date: day(0),   time: '10:00', topic: 'Границы с матерью', note: 'Разбирали эпизод на выходных: мать без предупреждения приехала. Анна промолчала, потом весь вечер злилась на себя. Вышли на формулировку «мне нужно знать заранее».', plan: 'Проверить, сказала ли она матери про предупреждение. Если нет — разобрать, что остановило.', amount: 4000, paid: false },
     { id: 's2',  clientId: 'c2',  date: day(0),   time: '15:30', topic: 'Восстановление ресурса', note: 'Первая неделя после отпуска. Говорит, что отдохнул, но к среде вернулось то же ощущение. Обсудили разницу между «отдохнуть» и «разгрузиться».', plan: 'Посмотреть, какие задачи он берёт на себя добровольно, хотя мог бы не брать.', amount: 4500, paid: false },
+    { id: 's22', clientId: 'c8',  date: day(0),   time: '12:00', topic: 'Кто я на новом месте', note: '', plan: '', amount: 4500, paid: false },
+    { id: 's23', clientId: 'c11', date: day(0),   time: '17:30', topic: 'Регулярность после перерыва', note: '', plan: '', amount: 4000, paid: false },
+    { id: 's24', clientId: 'c12', date: day(0),   time: '19:00', topic: 'Оплата и договорённости', note: '', plan: 'Договориться о предоплате прямо на встрече.', amount: 3800, paid: false },
 
     // ближайшие
     { id: 's3',  clientId: 'c7',  date: day(1),   time: '11:00', topic: 'Годовщина', note: '', plan: '', amount: 4200, paid: false },
     { id: 's4',  clientId: 'c3',  date: day(2),   time: '12:00', topic: 'Знакомство, сбор анамнеза', note: '', plan: '', amount: 3500, paid: false },
     { id: 's5',  clientId: 'c6',  date: day(2),   time: '17:00', topic: 'Школа: что происходит на самом деле', note: '', plan: '', amount: 4000, paid: false },
+    { id: 's25', clientId: 'c15', date: day(2),   time: '19:00', topic: 'Первая встреча (перенос)', note: '', plan: '', amount: 4000, paid: false },
     { id: 's6',  clientId: 'c10', date: day(3),   time: '18:30', topic: 'Триггеры переедания', note: '', plan: '', amount: 4800, paid: false },
     { id: 's7',  clientId: 'c1',  date: day(7),   time: '10:00', topic: 'Продолжение работы', note: '', plan: '', amount: 4000, paid: false },
     { id: 's8',  clientId: 'c9',  date: day(8),   time: '19:00', topic: 'Смены и восстановление', note: '', plan: '', amount: 4000, paid: false },
@@ -655,9 +659,14 @@ function renderWeek() {
   const end = days[6];
 
   const total = state.sessions.filter(s => s.date >= days[0] && s.date <= end);
-  const busiest = days
-    .map(day => ({ day, count: total.filter(s => s.date === day).length }))
-    .sort((a, b) => b.count - a.count)[0];
+
+  // «пик» имеет смысл только когда день действительно загружен,
+  // иначе на одной встрече из семи это просто шум
+  const PEAK_MIN = 3;
+  const counted = days.map(day => ({ day, count: total.filter(s => s.date === day).length }));
+  const busiest = counted.slice().sort((a, b) => b.count - a.count)[0];
+  const peakDay = busiest && busiest.count >= PEAK_MIN ? busiest.day : null;
+  const peakCount = peakDay ? busiest.count : 0;
 
   /* --- полный календарь --- */
   const calTitle = $('#calTitle');
@@ -676,9 +685,10 @@ function renderWeek() {
       const parts = [`${total.length} ${plural(total.length, 'встреча', 'встречи', 'встреч')}`];
       const booked = new Set(total.map(s => s.date)).size;
       parts.push(`${booked} ${plural(booked, 'день', 'дня', 'дней')} с встречами`);
-      if (busiest && busiest.count) {
-        const bd = parseDate(busiest.day);
-        parts.push('загруженнее всего ' + bd.toLocaleDateString('ru-RU', { weekday: 'long', day: 'numeric' }) + ` (${busiest.count})`);
+      if (peakDay) {
+        const bd = parseDate(peakDay);
+        parts.push('плотнее всего ' + bd.toLocaleDateString('ru-RU', { weekday: 'long', day: 'numeric' })
+          + ` — ${peakCount} ${plural(peakCount, 'встреча', 'встречи', 'встреч')}`);
       }
       sub.textContent = parts.join(' · ');
     }
@@ -697,7 +707,7 @@ function renderWeek() {
         .sort((a, b) => (a.time || '').localeCompare(b.time || ''));
       const isToday = day === t;
       const isPast = day < t;
-      const isBusiest = busiest && busiest.day === day && busiest.count > 0;
+      const isBusiest = peakDay === day;
       const isPicked = calDay === day;
 
       return `
