@@ -17,10 +17,64 @@ const STATUS = {
 const state = {
   clients: [],
   sessions: [],
+  meta: null,
   view: 'today',
   query: '',
   statusFilter: 'all',
+  pages: { clients: 1, sessions: 1 },
 };
+
+/* ---------- постраничный вывод ---------- */
+
+const PAGE_SIZE = 12;
+
+function pageSlice(list, key) {
+  const total = list.length;
+  const pages = Math.max(1, Math.ceil(total / PAGE_SIZE));
+  let page = Number(state.pages[key]) || 1;
+  if (page > pages) page = pages;
+  if (page < 1) page = 1;
+  state.pages[key] = page;
+  const start = (page - 1) * PAGE_SIZE;
+  return { items: list.slice(start, start + PAGE_SIZE), page, pages, total, start };
+}
+
+function pageNumbers(current, total) {
+  if (total <= 7) return Array.from({ length: total }, (_, i) => i + 1);
+  let from = Math.max(2, current - 1);
+  let to = Math.min(total - 1, current + 1);
+  // всегда показываем хотя бы три номера подряд, чтобы было куда шагнуть
+  if (to - from < 2) {
+    if (from === 2) to = Math.min(total - 1, from + 2);
+    else from = Math.max(2, to - 2);
+  }
+  const out = [1];
+  if (from > 2) out.push('…');
+  for (let i = from; i <= to; i++) out.push(i);
+  if (to < total - 1) out.push('…');
+  out.push(total);
+  return out;
+}
+
+function paintPager(el, info, key) {
+  if (!el) return;
+  if (info.pages <= 1) { el.hidden = true; el.innerHTML = ''; return; }
+  el.hidden = false;
+  const from = info.start + 1;
+  const to = info.start + info.items.length;
+  const nums = pageNumbers(info.page, info.pages).map(n => n === '…'
+    ? '<span class="pager-gap">…</span>'
+    : `<button class="pager-num${n === info.page ? ' is-active' : ''}" data-page="${key}:${n}" type="button"
+         ${n === info.page ? 'aria-current="page"' : ''} aria-label="Страница ${n}">${n}</button>`
+  ).join('');
+  el.innerHTML = `
+    <button class="pager-arrow" data-page="${key}:${info.page - 1}" type="button"
+      ${info.page === 1 ? 'disabled' : ''} aria-label="Предыдущая страница">‹</button>
+    ${nums}
+    <button class="pager-arrow" data-page="${key}:${info.page + 1}" type="button"
+      ${info.page === info.pages ? 'disabled' : ''} aria-label="Следующая страница">›</button>
+    <span class="pager-info">${from}–${to} из ${info.total}</span>`;
+}
 
 /* ---------- мелкие помощники ---------- */
 
@@ -80,14 +134,80 @@ function matchesQuery(...parts) {
 
 /* ---------- хранилище ---------- */
 
+/* ---------- живое демо ----------
+   Демо-набор не должен «стареть»: если его никто не трогал,
+   даты сдвигаются так, чтобы сегодняшний день снова был сегодня.
+   Как только в данных появились правки — сдвиг прекращается,
+   потому что это уже не демо, а рабочая база. */
+
+function demoSignature() {
+  const c = state.clients
+    .map(x => [x.id, x.name, x.phone, x.email, x.status, x.price, x.note].join('|'))
+    .join(';');
+  const s = state.sessions
+    .map(x => [x.id, x.clientId, x.time, x.topic, x.amount, x.paid ? 1 : 0,
+      x.missed ? 1 : 0, x.note, x.plan].join('|'))
+    .join(';');
+  return c + '#' + s;
+}
+
+function shiftIso(value, days) {
+  if (!value || !days) return value;
+  const d = parseDate(value);
+  if (isNaN(d.getTime())) return value;
+  d.setDate(d.getDate() + days);
+  return iso(d);
+}
+
+function demoShiftDays(fromIso) {
+  if (!fromIso) return 0;
+  const diff = Math.round((parseDate(today()) - parseDate(fromIso)) / 86400000);
+  return Number.isFinite(diff) ? diff : 0;
+}
+
+function applyDemoShift(days) {
+  if (!days) return;
+  state.sessions.forEach(s => { s.date = shiftIso(s.date, days); });
+  state.clients.forEach(c => { c.createdAt = shiftIso(c.createdAt, days); });
+}
+
 function load() {
   let raw = null;
   try { raw = localStorage.getItem(STORE_KEY); } catch (e) { /* file:// без хранилища */ }
   if (!raw) { seed(); save(); return; }
   try {
     const data = JSON.parse(raw);
-    state.clients = Array.isArray(data.clients) ? data.clients : [];
-    state.sessions = Array.isArray(data.sessions) ? data.sessions : [];
+    const clients = (Array.isArray(data.clients) ? data.clients : []).map(cleanClient).filter(Boolean);
+    const knownIds = new Set(clients.map(c => c.id));
+    state.clients = clients;
+    state.sessions = (Array.isArray(data.sessions) ? data.sessions : [])
+      .map(s => cleanSession(s, knownIds)).filter(Boolean);
+    state.meta = data.meta && typeof data.meta === 'object' ? data.meta : null;
+
+    const sig = demoSignature();
+    const wasDemo = state.meta && state.meta.demo && state.meta.sig === sig;
+
+    // старые сохранения без метки: узнаём демо-набор по отпечатку
+    let adoptDemo = false;
+    if (!state.meta && state.clients.length && state.sessions.length) {
+      const keepC = state.clients, keepS = state.sessions;
+      seed();
+      adoptDemo = demoSignature() === sig;
+      state.clients = keepC; state.sessions = keepS;
+      if (!adoptDemo) state.meta = { demo: false };
+    }
+
+    if (wasDemo || adoptDemo) {
+      const s1 = state.sessions.find(s => s.id === 's1');
+      const anchor = (state.meta && state.meta.anchor) || (s1 && s1.date);
+      applyDemoShift(demoShiftDays(anchor));
+      state.meta = { demo: true, anchor: today(), sig: demoSignature() };
+      save();
+    } else if (state.meta && state.meta.demo) {
+      // данные правили — это уже не демо, даты больше не двигаем
+      state.meta = { demo: false };
+      save();
+    }
   } catch (e) {
     console.warn('Не удалось прочитать сохранённые данные, начинаем с демо-набора.', e);
     seed();
@@ -97,7 +217,9 @@ function load() {
 
 function save() {
   try {
-    localStorage.setItem(STORE_KEY, JSON.stringify({ clients: state.clients, sessions: state.sessions }));
+    localStorage.setItem(STORE_KEY, JSON.stringify({
+      clients: state.clients, sessions: state.sessions, meta: state.meta,
+    }));
     rememberSnapshot();
   } catch (e) {
     console.warn('Браузер не даёт сохранить данные:', e);
@@ -223,10 +345,14 @@ function seed() {
     { id: 's16', clientId: 'c11', date: day(-11), time: '16:00', topic: 'Возвращение после перерыва', note: 'Паники стали реже, но появился страх, что «вернётся». Проверяли, что изменилось за 8 месяцев: научился замечать начало и выходить из ситуации.', plan: 'Сместить фокус с «как не допустить» на «что я делаю, когда начинается».', amount: 4000, paid: true },
     { id: 's17', clientId: 'c12', date: day(-13), time: '12:00', topic: 'Деньги и стыд', note: 'Опять пришла без оплаты за прошлый раз. Сама заговорила первой: «мне очень неудобно». Разбирали, что мешает сказать прямо, что сейчас трудно.', plan: 'Предложить конкретный вариант: оплата в день встречи или пауза до стабилизации. Без осуждения.', amount: 3800, paid: false },
     { id: 's18', clientId: 'c14', date: day(-40), time: '10:00', topic: 'Последняя встреча', note: 'Подводили итоги за год. Сказала, что впервые не боится остаться одна. Договорились, что может вернуться, если понадобится, — без объяснений и обязательств.', plan: '', amount: 4000, paid: true },
-    { id: 's19', clientId: 'c15', date: day(-12), time: '13:00', topic: 'Первая встреча не состоялась', note: 'Не пришёл, написал через два часа: «простите, не смог». Не переносили — предложил сам «может, позже».', plan: 'Написать один раз, коротко, без давления. Если не ответит — оставить.', amount: 0, paid: false },
+    { id: 's19', clientId: 'c15', date: day(-12), time: '13:00', topic: 'Первая встреча не состоялась', note: 'Не пришёл, написал через два часа: «простите, не смог». Не переносили — предложил сам «может, позже».', plan: 'Написать один раз, коротко, без давления. Если не ответит — оставить.', amount: 0, paid: false, missed: true },
     { id: 's20', clientId: 'c13', date: day(-60), time: '18:00', topic: 'Пауза в работе', note: 'Сообщил о потере работы. Предложил паузу сам, я согласилась. Договорились, что напишет, когда сможет вернуться.', plan: '', amount: 4000, paid: false },
     { id: 's21', clientId: 'c4',  date: day(-25), time: '19:00', topic: 'Командировка', note: 'Уезжает на месяц, встречи возобновим по возвращении. Состояние стабильное, запрос был про тревогу перед поездками — с этим поработали.', plan: '', amount: 4000, paid: true },
   ];
+
+  // помечаем набор как демонстрационный: пока его не правили,
+  // даты будут автоматически сдвигаться к сегодняшнему дню
+  state.meta = { demo: true, anchor: today(), sig: demoSignature() };
 }
 
 /* ---------- таблица для Excel ---------- */
@@ -391,23 +517,78 @@ function exportData() {
   toast('Копия сохранена в загрузки');
 }
 
+const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
+
+function cleanClient(raw) {
+  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return null;
+  const name = String(raw.name ?? '').trim();
+  if (!name) return null;
+  return {
+    id: String(raw.id || uid()),
+    name,
+    phone: String(raw.phone ?? ''),
+    email: String(raw.email ?? ''),
+    status: STATUS[raw.status] ? raw.status : 'new',
+    price: Math.max(0, Number(raw.price) || 0),
+    note: String(raw.note ?? ''),
+    createdAt: DATE_RE.test(String(raw.createdAt)) ? String(raw.createdAt) : today(),
+  };
+}
+
+function cleanSession(raw, knownIds) {
+  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return null;
+  const date = String(raw.date ?? '');
+  if (!DATE_RE.test(date)) return null;
+  const clientId = String(raw.clientId ?? '');
+  if (!clientId || (knownIds && !knownIds.has(clientId))) return null;
+  const time = String(raw.time ?? '');
+  return {
+    id: String(raw.id || uid()),
+    clientId,
+    date,
+    time: /^\d{1,2}:\d{2}$/.test(time) ? time : '',
+    topic: String(raw.topic ?? ''),
+    note: String(raw.note ?? ''),
+    plan: String(raw.plan ?? ''),
+    amount: Math.max(0, Number(raw.amount) || 0),
+    paid: !!raw.paid,
+    missed: !!raw.missed,
+  };
+}
+
 function importData(file) {
   const reader = new FileReader();
   reader.onload = () => {
     try {
       const data = JSON.parse(String(reader.result));
-      const clients = Array.isArray(data.clients) ? data.clients : null;
-      const sessions = Array.isArray(data.sessions) ? data.sessions : null;
-      if (!clients || !sessions) throw new Error('в файле нет клиентов и сессий');
+      const rawClients = Array.isArray(data.clients) ? data.clients : null;
+      const rawSessions = Array.isArray(data.sessions) ? data.sessions : null;
+      if (!rawClients || !rawSessions) throw new Error('в файле нет клиентов и сессий');
 
-      if (!confirm(`Заменить текущие данные копией?\n\nВ копии: клиентов — ${clients.length}, сессий — ${sessions.length}.\nТекущие данные можно будет вернуть через «Историю».`)) return;
+      const clients = rawClients.map(cleanClient).filter(Boolean);
+      const knownIds = new Set(clients.map(c => c.id));
+      const sessions = rawSessions.map(s => cleanSession(s, knownIds)).filter(Boolean);
+
+      const lostC = rawClients.length - clients.length;
+      const lostS = rawSessions.length - sessions.length;
+      if (!clients.length && !sessions.length) {
+        throw new Error('в файле не нашлось ни одного клиента и ни одной встречи');
+      }
+
+      let warn = '';
+      if (lostC || lostS) {
+        warn = `\n\nПропущено повреждённых записей: клиентов — ${lostC}, встреч — ${lostS}.`;
+      }
+
+      if (!confirm(`Заменить текущие данные копией?\n\nВ копии: клиентов — ${clients.length}, сессий — ${sessions.length}.${warn}\nТекущие данные можно будет вернуть через «Историю».`)) return;
 
       rememberSnapshot(true);
       state.clients = clients;
       state.sessions = sessions;
+      state.meta = { demo: false }; // данные свои — автоперенос дат выключается
       save();
       render();
-      toast('Данные загружены из копии');
+      toast(lostC || lostS ? 'Данные загружены, часть записей пропущена' : 'Данные загружены из копии');
     } catch (e) {
       alert('Не получилось прочитать файл. Похоже, это не копия данных «Кабинета».\n\n' + e.message);
     }
@@ -505,7 +686,12 @@ function renderWeek() {
 
   const listEl = $('#weekList');
   if (listEl) {
-    listEl.innerHTML = days.map(day => {
+    const nothingAtAll = !state.sessions.length;
+    listEl.innerHTML = (nothingAtAll ? `
+      <div class="empty cal-empty-note">
+        <p>Встреч нет совсем — на этой неделе календарь пустой.</p>
+        <p class="empty-sub">Добавь первую встречу кнопкой «+ Встреча» или заведи клиента в разделе «Клиенты».</p>
+      </div>` : '') + days.map(day => {
       const list = state.sessions
         .filter(s => s.date === day)
         .sort((a, b) => (a.time || '').localeCompare(b.time || ''));
@@ -523,7 +709,6 @@ function renderWeek() {
               ${isBusiest ? '<span class="week-peak">пик</span>' : ''}
               <span class="week-count">${list.length || ''}</span>
             </button>
-            <button class="week-add" data-add-day="${day}" type="button" title="Добавить встречу на этот день"${isPast ? ' hidden' : ''}>+</button>
           </div>
           <div class="week-slots">
             ${list.length
@@ -537,6 +722,7 @@ function renderWeek() {
                 }).join('')
               : '<span class="week-free">свободно</span>'}
           </div>
+          <button class="week-add" data-add-day="${day}" type="button" title="Добавить встречу на этот день" aria-label="Добавить встречу на этот день"${isPast ? ' hidden' : ''}>+</button>
         </div>`;
     }).join('');
   }
@@ -763,6 +949,7 @@ function timerReset(minutes = TIMER_MINUTES) {
 /* ---------- колода: вопросы для психолога ---------- */
 
 const DECK_KEY = 'psy-crm-deck';
+const DECK_CATS_KEY = 'psy-crm-deck-cats';
 const DECK_CATS = [
   ['anxiety', 'Тревога'],
   ['relations', 'Отношения'],
@@ -771,6 +958,8 @@ const DECK_CATS = [
   ['work', 'Работа и выгорание'],
   ['stuck', 'Застряла'],
 ];
+// встроенные категории — их не надо хранить, они и так в коде
+const DECK_CATS_BUILTIN = DECK_CATS.map(([k]) => k);
 
 const DECK_BASE = {
   anxiety: [
@@ -819,6 +1008,31 @@ function deckLoad() {
 function deckSave(data) {
   try { localStorage.setItem(DECK_KEY, JSON.stringify(data)); } catch (e) { /* нет хранилища */ }
 }
+
+/* свои категории: в памяти они живут в DECK_CATS, но название нужно
+   сохранять отдельно, иначе после перезагрузки вместо «моя тема»
+   покажется служебный код */
+function deckSaveCats() {
+  const extra = DECK_CATS.filter(([k]) => DECK_CATS_BUILTIN.indexOf(k) < 0);
+  try { localStorage.setItem(DECK_CATS_KEY, JSON.stringify(extra)); } catch (e) { /* нет хранилища */ }
+}
+
+function deckLoadCats() {
+  try {
+    const raw = localStorage.getItem(DECK_CATS_KEY);
+    if (!raw) return;
+    const extra = JSON.parse(raw);
+    if (!Array.isArray(extra)) return;
+    extra.forEach(item => {
+      if (!Array.isArray(item) || item.length < 2) return;
+      const [key, label] = item;
+      if (!key || !label) return;
+      if (!DECK_CATS.some(([k]) => k === key)) DECK_CATS.push([String(key), String(label)]);
+    });
+  } catch (e) { /* повреждённое хранилище — просто игнорируем */ }
+}
+
+deckLoadCats();
 
 let deckData = deckLoad() || JSON.parse(JSON.stringify(DECK_BASE));
 let deckCat = 'anxiety';
@@ -876,6 +1090,7 @@ function deckAddCategory(name) {
   deckData[key] = [];
   DECK_CATS.push([key, n]);
   deckSave(deckData);
+  deckSaveCats();
   deckCat = key;
   deckRenderAll();
   return true;
@@ -902,7 +1117,8 @@ function hintsFor(clientId) {
   const sessions = sessionsOf(clientId).filter(s => s.date <= t);
   const last = sessions[sessions.length - 1];
   const next = sessionsOf(clientId).find(s => s.date > t);
-  const debt = state.sessions.filter(s => s.clientId === clientId && !s.paid && s.date <= t);
+  const debt = state.sessions.filter(s =>
+    s.clientId === clientId && !s.paid && s.date <= t && !s.missed && Number(s.amount) > 0);
 
   if (last) {
     const gap = Math.round((parseDate(t) - parseDate(last.date)) / 86400000);
@@ -919,7 +1135,7 @@ function hintsFor(clientId) {
     const sum = debt.reduce((acc, s) => acc + (Number(s.amount) || 0), 0);
     out.push({ tone: 'warm', text: `Не оплачено ${debt.length} ${plural(debt.length, 'сессия', 'сессии', 'сессий')} на ${money(sum)}.` });
   } else if (debt.length === 1 && debt[0].date < t) {
-    out.push({ tone: 'calm', text: `Не оплачена встреча от ${humanDateShort(debt[0].date)}.` });
+    out.push({ tone: 'calm', text: `Не оплачена встреча от ${humanDateShort(debt[0].date)}` });
   }
 
   // подсказки про этап — только для тех, кто ещё в работе
@@ -1295,8 +1511,11 @@ function renderClients() {
   $('#clientsSub').textContent = `${list.length} ${plural(list.length, 'клиент', 'клиента', 'клиентов')}`
     + (state.query.trim() ? ` по запросу «${state.query.trim()}»` : '');
 
-  $('#clientsGrid').innerHTML = list.length
-    ? list.map(c => {
+  const pageInfo = pageSlice(list, 'clients');
+  const shown = pageInfo.items;
+
+  $('#clientsGrid').innerHTML = shown.length
+    ? shown.map(c => {
         const sessions = sessionsOf(c.id);
         const past = sessions.filter(s => s.date <= today());
         const next = sessions.find(s => s.date >= today());
@@ -1316,6 +1535,8 @@ function renderClients() {
           </button>`;
       }).join('')
     : `<div class="empty">Никого не нашлось. <button class="link-btn" data-action="new-client" type="button">Добавить клиента</button></div>`;
+
+  paintPager($('#clientsPager'), pageInfo, 'clients');
 }
 
 function renderSessions() {
@@ -1332,6 +1553,7 @@ function renderSessions() {
 
   if (!list.length) {
     $('#sessionsList').innerHTML = '<div class="empty">Сессий пока нет. Добавь первую кнопкой «+ Сессия» на главной.</div>';
+    paintPager($('#sessionsPager'), { pages: 0, page: 1, items: [], total: 0, start: 0 }, 'sessions');
     return;
   }
 
@@ -1339,7 +1561,8 @@ function renderSessions() {
       <span>Дата</span><span>Клиент</span><span>Тема</span><span>Стоимость</span><span></span><span></span>
     </div>`;
 
-  const rows = list.map(s => {
+  const pageInfo = pageSlice(list, 'sessions');
+  const rows = pageInfo.items.map(s => {
     const c = clientById(s.clientId) || {};
     return `
       <div class="session-line">
@@ -1356,6 +1579,7 @@ function renderSessions() {
   }).join('');
 
   $('#sessionsList').innerHTML = head + rows;
+  paintPager($('#sessionsPager'), pageInfo, 'sessions');
 }
 
 /* ---------- диалоги ---------- */
@@ -1520,9 +1744,26 @@ $('#sessionClient').addEventListener('change', e => {
 
 $('#search').addEventListener('input', e => {
   state.query = e.target.value;
+  state.pages.clients = 1;
+  state.pages.sessions = 1;
   // поиск по клиентам — сразу переключаемся на раздел «Клиенты», иначе результат не виден
   if (state.query.trim() && state.view !== 'clients') setView('clients');
   render();
+});
+
+/* переход по страницам */
+document.addEventListener('click', e => {
+  const btn = e.target.closest('[data-page]');
+  if (!btn || btn.disabled) return;
+  const [key, num] = String(btn.dataset.page).split(':');
+  if (!state.pages.hasOwnProperty(key)) return;
+  state.pages[key] = Number(num) || 1;
+  if (key === 'clients') renderClients(); else renderSessions();
+  const view = document.querySelector('.view.is-active');
+  if (view) {
+    const top = view.getBoundingClientRect().top + window.scrollY - 12;
+    window.scrollTo({ top: Math.max(0, top), behavior: 'smooth' });
+  }
 });
 
 $$('[data-reset-demo]').forEach(btn => btn.addEventListener('click', () => {
@@ -1538,6 +1779,7 @@ document.addEventListener('click', e => {
 
   if (target.dataset.status) {
     state.statusFilter = target.dataset.status;
+    state.pages.clients = 1;
     renderClients();
     return;
   }
@@ -1874,6 +2116,7 @@ $('#stats').addEventListener('click', e => {
   if (tile.dataset.stat === 'clients') {
     state.statusFilter = 'active';
     state.query = '';
+    state.pages.clients = 1;
     $('#search').value = '';
     setView('clients');
     render();

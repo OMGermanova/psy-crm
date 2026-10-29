@@ -102,7 +102,7 @@
           <svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
             <circle cx="11" cy="11" r="7" /><path d="m20 20-3.6-3.6" />
           </svg>
-          <input type="search" id="search" placeholder="Найти клиента по имени, телефону или почте" autocomplete="off" />
+          <input type="search" id="search" aria-label="Поиск клиента по имени, телефону или почте" placeholder="Найти клиента по имени, телефону или почте" autocomplete="off" />
         </label>
         <button class="btn btn-primary" id="newClient" type="button">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
@@ -195,6 +195,7 @@
           </div>
           <div class="chips" id="statusFilter"></div>
           <div class="clients-grid" id="clientsGrid"></div>
+          <nav class="pager" id="clientsPager" aria-label="Страницы списка клиентов" hidden></nav>
         </section>
 
         <section class="view" id="view-sessions">
@@ -204,6 +205,7 @@
           </div>
           <div class="panel">
             <div class="sessions" id="sessionsList"></div>
+            <nav class="pager" id="sessionsPager" aria-label="Страницы списка сессий" hidden></nav>
           </div>
         </section>
       </div>
@@ -397,11 +399,11 @@
         <div class="deck-cats" id="deckCats"></div>
         <div class="deck-list" id="deckList"></div>
         <form class="deck-add" id="deckAddForm">
-          <input id="deckNewQ" placeholder="Свой вопрос" autocomplete="off" />
+          <input id="deckNewQ" aria-label="Свой вопрос в колоду" placeholder="Свой вопрос" autocomplete="off" />
           <button class="btn btn-soft" type="submit">Добавить</button>
         </form>
         <form class="deck-add" id="deckCatForm">
-          <input id="deckNewCat" placeholder="Новая категория" autocomplete="off" />
+          <input id="deckNewCat" aria-label="Название новой категории колоды" placeholder="Новая категория" autocomplete="off" />
           <button class="btn btn-soft" type="submit">Добавить</button>
         </form>
       </section>
@@ -431,7 +433,7 @@
     <div class="dialog-form">
       <h2>Начать сессию</h2>
       <p class="view-sub" style="margin:-6px 0 2px">Выберите клиента — откроется режим сессии.</p>
-      <input class="start-search" id="startSearch" placeholder="Поиск по имени" autocomplete="off" />
+      <input class="start-search" id="startSearch" aria-label="Поиск клиента для старта сессии" placeholder="Поиск по имени" autocomplete="off" />
       <div class="start-list" id="startList"></div>
       <div class="dialog-actions">
         <button class="btn btn-ghost" type="button" data-close-start>Отмена</button>
@@ -440,7 +442,7 @@
     </div>
   </dialog>
 
-  <input type="file" id="importFile" accept="application/json,.json" hidden />
+  <input type="file" id="importFile" aria-label="Файл резервной копии для загрузки" accept="application/json,.json" hidden />
   <script src="app.js"></script>
 </body>
 </html>
